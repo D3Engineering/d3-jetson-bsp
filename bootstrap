@@ -1,0 +1,4 @@
+#!/bin/bash
+mkdir -p m4
+aclocal -I m4 --install
+autoreconf -I m4 -f -i
