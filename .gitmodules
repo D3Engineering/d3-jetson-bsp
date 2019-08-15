@@ -1,0 +1,48 @@
+[submodule "kernel/kernel-4.9"]
+	path = kernel/kernel-4.9
+	url = git://nv-tegra.nvidia.com/linux-4.9.git
+[submodule "kernel/nvgpu"]
+	path = kernel/nvgpu
+	url = git://nv-tegra.nvidia.com/linux-nvgpu.git
+[submodule "kernel/nvidia"]
+	path = kernel/nvidia
+	url = git://nv-tegra.nvidia.com/linux-nvidia.git
+[submodule "hardware/nvidia/soc/t18x"]
+	path = hardware/nvidia/soc/t18x
+	url = git://nv-tegra.nvidia.com/device/hardware/nvidia/soc/t18x.git
+[submodule "hardware/nvidia/platform/tegra/common"]
+	path = hardware/nvidia/platform/tegra/common
+	url = git://nv-tegra.nvidia.com/device/hardware/nvidia/platform/tegra/common.git
+[submodule "hardware/nvidia/platform/t18x/common"]
+	path = hardware/nvidia/platform/t18x/common
+	url = git://nv-tegra.nvidia.com/device/hardware/nvidia/platform/t18x/common.git
+[submodule "hardware/nvidia/platform/t18x/quill"]
+	path = hardware/nvidia/platform/t18x/quill
+	url = git://nv-tegra.nvidia.com/device/hardware/nvidia/platform/t18x/quill.git
+[submodule "hardware/nvidia/soc/t210"]
+	path = hardware/nvidia/soc/t210
+	url = git://nv-tegra.nvidia.com/device/hardware/nvidia/soc/t210.git
+[submodule "hardware/nvidia/platform/t210/common"]
+	path = hardware/nvidia/platform/t210/common
+	url = git://nv-tegra.nvidia.com/device/hardware/nvidia/platform/t210/common.git
+[submodule "hardware/nvidia/platform/t210/jetson"]
+	path = hardware/nvidia/platform/t210/jetson
+	url = git://nv-tegra.nvidia.com/device/hardware/nvidia/platform/t210/jetson.git
+[submodule "hardware/nvidia/platform/t210/porg"]
+	path = hardware/nvidia/platform/t210/porg
+	url = git://nv-tegra.nvidia.com/device/hardware/nvidia/platform/t210/porg.git
+[submodule "hardware/nvidia/soc/t19x"]
+	path = hardware/nvidia/soc/t19x
+	url = git://nv-tegra.nvidia.com/device/hardware/nvidia/soc/t19x.git
+[submodule "hardware/nvidia/platform/t19x/common"]
+	path = hardware/nvidia/platform/t19x/common
+	url = git://nv-tegra.nvidia.com/device/hardware/nvidia/platform/t19x/common.git
+[submodule "hardware/nvidia/platform/t19x/galen/bct"]
+	path = hardware/nvidia/platform/t19x/galen/bct
+	url = git://nv-tegra.nvidia.com/device/hardware/nvidia/platform/t19x/stardust-bct.git
+[submodule "hardware/nvidia/platform/t19x/galen/kernel-dts"]
+	path = hardware/nvidia/platform/t19x/galen/kernel-dts
+	url = git://nv-tegra.nvidia.com/device/hardware/nvidia/platform/t19x/stardust-dts.git
+[submodule "hardware/nvidia/soc/tegra"]
+	path = hardware/nvidia/soc/tegra
+	url = git://nv-tegra.nvidia.com/device/hardware/nvidia/soc/tegra.git
