@@ -16,13 +16,15 @@ This project uses git submodules to pull in repositories publish by
 Nvidia. The use of git submodules requires extra steps that are not
 needed for git repositories that do not use submodules.
 
-After the initial clone choose your branch. The master branch serves
-as an example for building the standard Nvidia Jetson kernel. D3
-specific code will be added on different branches. The following will
-checkout the nvidia branch with Linux for Tegra r32.1 submodules.
+After the initial clone choose a branch corresponding to the release
+you would like to build. The master branch only provides this
+documentation; all working code is contained in branches.  D3 specific
+code will be added on different branches in the near future. The
+following will checkout the nvidia branch with Linux for Tegra r32.2.1
+submodules.
 
 ```
-git checkout nvidia/r32.1
+git checkout nvidia/r32.2.1
 git submodule update --init
 ```
 
