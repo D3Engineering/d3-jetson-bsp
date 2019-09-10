@@ -1,0 +1,79 @@
+/*
+ * Copyright (c) 2018-2019, D3 Engineering.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+
+// UB960
+#include "d3-rsp-ub960-reset.dtsi"
+
+// UB953 & imager
+#include "d3-cam-reset.dtsi"
+#define STATUS okay
+#define CSI_PORT 2
+#define CSI_LANES 2
+#define TEGRA_SINTERFACE serial_c
+#define ENDPOINT_A 4
+#define ENDPOINT_B 5
+#define POSITION centerright
+#define ORIENTATION 1
+#define IOVDD_SUPPLY <&vdd_1v8_ap>
+#define AVDD_SUPPLY <&vdd_1v8_ap>
+#define RESET_PIN <&gpio_i2c_8_75 5 GPIO_ACTIVE_LOW>
+
+
+#ifdef BOARD_FPDLINK
+#   define DES_LINK fpd34_link0
+#   define DES_LINK_PATH /proc/device-tree/i2c@3180000/ds90ub954@34/link@0
+#   define IMG_BUS 2
+#   define DES_ADDR 34
+#   define SER_ADDR 40
+#   define IMG_ADDR 4c
+#   include "d3-rsp-ub960-template.dtsi"
+#endif
+
+#ifdef BOARD_GMSL1
+#   define DES_LINK gmsl_link2
+#   define DES_LINK_PATH /proc/device-tree/i2c@3180000/deserializer@4c/link@0
+#   define IMG_BUS 23
+#   define DES_ADDR 4c
+#   define SER_ADDR 43
+#   define IMG_ADDR 13
+#endif
+
+#ifdef BOARD_GMSL2
+#   define DES_LINK gmsl_link2
+#   define DES_LINK_PATH /proc/device-tree/i2c@3180000/deserializer@68/link@0
+#   define IMG_BUS 23
+#   define DES_ADDR 68
+#   define SER_ADDR 43
+#   define IMG_ADDR 13
+#endif
+
+
+#ifdef CAMERA_OV10640
+#   include "d3-cam-ov10640-template.dtsi"
+#endif
+
+#ifdef CAMERA_IMX390
+#   include "d3-cam-imx390-template.dtsi"
+#endif
+
+#ifdef CAMERA_IMX390RCM
+#   include "d3-cam-imx390rcm-template.dtsi"
+#endif
+
+#ifdef CAMERA_VG6768
+#   include "d3-cam-vg6768-template.dtsi"
+#endif
+
+#ifdef CAMERA_AR0820
+#   include "d3-cam-ar820-template.dtsi"
+#endif

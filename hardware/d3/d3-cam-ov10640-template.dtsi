@@ -1,0 +1,218 @@
+/*
+ * Copyright (c) 2018-2019, D3 Engineering.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+#include "d3-cam-check.dtsi"
+#include "d3-string-utils.dtsi"
+
+#define OV10640_MODE_COMMON \
+	mclk_khz = "25000"; \
+	mclk_multiplier = "22.0"; \
+	num_lanes = STR(CSI_LANES); \
+	tegra_sinterface = STR(TEGRA_SINTERFACE); \
+	discontinuous_clk = "no"; \
+	dpcm_enable = "false"; \
+	cil_settletime = "0"; \
+	csi_pixel_bit_depth = "12"; \
+	pixel_phase = "bggr"; \
+	active_w = "1280"; \
+	active_h = "1080"; \
+	readout_orientation = "0"; \
+	line_length = "1450"; \
+	inherent_gain = "1"; \
+	serdes_pix_clk_hz = "535000000"; \
+	pix_clk_hz = "71428571"; \
+	min_framerate = "30"; \
+	max_framerate = "30"; \
+	embedded_metadata_height = "0"
+
+&CONCAT_2(cam_module, PORT_IDX) {
+	badge = STR(CONCAT_3(d3_, POSITION, _ov10640));
+	position = STR(POSITION);
+	status = STR(STATUS);
+	orientation = STR(ORIENTATION);
+
+	drivernode0 {
+		pcl_id = "v4l2_sensor";
+		devname = STR(JOIN_2(ov10640, CONCAT_3(IMG_BUS,-00,IMG_ADDR)));
+		status = STR(STATUS);
+		proc-device-tree = STR(CONCAT_5(DES_LINK_PATH,/ub953@,SER_ADDR,/ov10640@,IMG_ADDR));
+	};
+};
+
+&DES_LINK {
+	ub953@SER_ADDR {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		reg = <HEX_PREFIX(SER_ADDR)>;
+
+		status = STR(STATUS);
+		compatible = "d3,ub953";
+		physical-addr = <0x30>;
+
+		/* TODO: FSIN <-GPIO0-> FPGA_SYNC_n ? */
+		/* TODO: RESETB <-GPIO1-> ??? */
+
+		wait-for-self-configure;
+		gpio-rmten = <0x0>;
+		gpio-out-src = <0x6>;
+		gpio-out-en = <0x3>;
+		gpio-in-en = <0x4>;
+
+		/* Index of the GPIO pin used to drive the imager's frame sync input,
+		 * if applicable */
+		fsync-gpio = <0>;
+
+		/*
+		  F_BCC=50MHz
+		  REF_CLK=F_BCC/2
+		  FC=REF_CLK*160
+		  CLK_OUT=FC / (2^HS_CLK_DIV) * M / N
+		  1 <= M <= 15
+		  1 <= N <= 255
+		  0 <= HS_CLK_DIV <= 4
+		  CLK_OUT <= 100MHz
+		*/
+
+		/* 50MHz ??? */
+		hs-clk-div = <2>;
+		div-m-val = <1>;
+		div-n-val = <40>;
+
+		csi-continuous-clock = <0>;
+		csi-lane-count = <4>;
+		i2c-voltage-sel = <1>;
+
+		/* sensor */
+		ov10640@IMG_ADDR {
+			compatible = "d3,ov10640";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <HEX_PREFIX(IMG_ADDR)>;
+			status = "okay";
+			physical-addr = <0x64>;
+			devnode = STR(CONCAT_2(video, CSI_PORT));
+			mclk = "extperiph1";
+			physical_w = "5.41";
+			physical_h = "4.57";
+			sensor_model = "ov10640";
+
+			use_decibel_gain = "false";
+			use_sensor_mode_id = "true";
+
+
+			/* 3 exposure HDR mode  */
+			/* mode0 { */
+			/* 	OV10640_MODE_COMMON; */
+			/* 	mode_type = "bayer_wdr_pwl"; */
+			/* 	/\* min == max to disable AE gain */
+			/* 	 * control in HDR mode. *\/ */
+			/* 	min_gain_val = "1.0"; */
+			/* 	max_gain_val = "1.0"; */
+			/* 	/\* The default exposure *\/ */
+			/* 	/\* minimum is TWO lines. *\/ */
+			/* 	min_exp_time = "40"; */
+			/* 	/\* maximum is (frame period - 6 lines) *\/ */
+			/* 	max_exp_time = "33698"; */
+			/* 	min_hdr_ratio = "2.0"; */
+			/* 	max_hdr_ratio = "2.0"; */
+			/* 	dynamic_pixel_bit_depth = "20"; */
+			/* 	num_control_point = "4"; */
+			/* 	control_point_x_0 = "2047"; */
+			/* 	control_point_y_0 = "511"; */
+			/* 	control_point_x_1 = "16383"; */
+			/* 	control_point_y_1 = "1407"; */
+			/* 	control_point_x_2 = "65535"; */
+			/* 	control_point_y_2 = "2175"; */
+			/* 	control_point_x_3 = "1048575"; */
+			/* 	control_point_y_3 = "4095"; */
+			/* }; */
+
+			/* Long exposure mode (linear) */
+			mode0 {
+				OV10640_MODE_COMMON;
+				mode_type = "bayer";
+				min_gain_val = "1.0";
+				max_gain_val = "8.0";
+				/* minimum is one line */
+				min_exp_time = "20";
+				/* maximum is (frame period - 6 lines) */
+				max_exp_time = "33698";
+				min_hdr_ratio = "1";
+				max_hdr_ratio = "1";
+			};
+
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				status = STR(STATUS);
+				port@0 {
+					reg = <0>;
+					CONCAT_2(sen_out, PORT_IDX): endpoint {
+						status = STR(STATUS);
+						port-index = <CSI_PORT>;
+						bus-width = <CSI_LANES>;
+						remote-endpoint = <&CONCAT_2(csi_in, PORT_IDX)>;
+					};
+				};
+			};
+		};
+	};
+};
+
+&vi_base {
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+			port@PORT_IDX {
+				status = STR(STATUS);
+				reg = <PORT_IDX>;
+				CONCAT_2(vi_in, PORT_IDX): endpoint {
+						status = STR(STATUS);
+						port-index = <CSI_PORT>;
+						bus-width = <CSI_LANES>;
+						remote-endpoint = <&CONCAT_2(csi_out, PORT_IDX)>;
+					};
+				};
+			};
+};
+
+&csi_base {
+	channel@PORT_IDX {
+		status = STR(STATUS);
+		reg = <PORT_IDX>;
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			port@0 {
+				status = STR(STATUS);
+				reg = <0>;
+				CONCAT_2(csi_in, PORT_IDX): endpoint@ENDPOINT_A {
+					status = STR(STATUS);
+					port-index = <CSI_PORT>;
+					bus-width = <CSI_LANES>;
+					remote-endpoint = <&CONCAT_2(sen_out, PORT_IDX)>;
+				};
+			};
+			port@1 {
+				status = STR(STATUS);
+				reg = <1>;
+				CONCAT_2(csi_out, PORT_IDX): endpoint@ENDPOINT_B {
+					status = STR(STATUS);
+					remote-endpoint = <&CONCAT_2(vi_in, PORT_IDX)>;
+				};
+			};
+		};
+	};
+};
+

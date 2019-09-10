@@ -1,7 +1,24 @@
-AC_INIT([Jetson BSP], [0.0.0])
-AC_PREREQ(2.69)
-#AC_COPYRIGHT([Copyright (C) 2019 D3 Engineering])
+m4_define(d3_jetson_bsp_triplet, m4_esyscmd_s([cat version.txt]))
+m4_define(d3_jetson_bsp_list, m4_split(d3_jetson_bsp_triplet, [[.]]))
+m4_define(d3_jetson_bsp_major, m4_argn(1, d3_jetson_bsp_list))
+m4_define(d3_jetson_bsp_minor, m4_argn(2, d3_jetson_bsp_list))
+m4_define(d3_jetson_bsp_patch, m4_argn(3, d3_jetson_bsp_list))
+m4_define(customer, m4_esyscmd_s([cat customer.txt]))
 
+
+AC_INIT([D3 Jetson BSP], [d3_jetson_bsp_triplet])
+AC_PREREQ(2.69)
+AC_COPYRIGHT([Copyright (C) 2019 D3 Engineering])
+
+AC_SUBST([D3_JETSON_BSP_MAJOR], d3_jetson_bsp_major)
+AC_SUBST([D3_JETSON_BSP_MINOR], d3_jetson_bsp_minor)
+AC_SUBST([D3_JETSON_BSP_PATCH], d3_jetson_bsp_patch)
+AC_SUBST([D3_JETSON_BSP_VERSION], d3_jetson_bsp_triplet)
+
+AC_DEFINE([D3_JETSON_BSP_MAJOR], d3_jetson_bsp_major, [Major Version])
+AC_DEFINE([D3_JETSON_BSP_MINOR], d3_jetson_bsp_minor, [Minor Version])
+AC_DEFINE([D3_JETSON_BSP_PATCH], d3_jetson_bsp_version_patch, [Patch Version])
+AC_DEFINE([D3_JETSON_BSP_VERSION], d3_jetson_bsp_triplet, [Version])
 
 AC_USE_SYSTEM_EXTENSIONS
 AM_PROG_AR
@@ -17,17 +34,12 @@ AC_ARG_WITH(
     [target_host=$withval],
     [target_host=192.168.55.1])
 
+# This is only to make development easier
 AC_ARG_WITH(
     [dtb],
     AS_HELP_STRING([--with-dtb=dtb-file], [specify dtb file for flash-dtb]),
     [dtb_file=$withval],
-    [dtb_file=`realpath -q .`/build/deploy/boot/TODO])
-
-AC_ARG_WITH(
-    [kconfig],
-    AS_HELP_STRING([--with-kconfig=kernel-config-file], [specify a custom Linux .config file]),
-    [kconfig_file=$withval],
-    [kconfig_file=])
+    [dtb_file=`realpath .`/build/deploy/boot/d3-ncic-imx390.dtb])
 
 AC_ARG_WITH(
     [l4t],
@@ -48,17 +60,17 @@ AC_ARG_WITH(
           xavier)
             AM_CONDITIONAL(XAVIER, true)
             system_type=xavier
-            l4t_dir=`realpath -q ~/nvidia/nvidia_sdk/JetPack_4.2_Linux_P2888/Linux_for_Tegra`
+            l4t_dir=`realpath ~/nvidia/nvidia_sdk/JetPack_4.2_Linux_P2888/Linux_for_Tegra`
           ;;
           tx2)
             AM_CONDITIONAL(TX2, true)
             system_type=tx2
-            l4t_dir=`realpath -q ~/nvidia/nvidia_sdk/JetPack_4.2_Linux_P3310/Linux_for_Tegra`
+            l4t_dir=`realpath ~/nvidia/nvidia_sdk/JetPack_4.2_Linux_P3310/Linux_for_Tegra`
           ;;
           nano)
             AM_CONDITIONAL(NANO, true)
             system_type=nano
-            l4t_dir=`realpath -q ~/nvidia/nvidia_sdk/JetPack_4.2_Linux_P3448/Linux_for_Tegra`
+            l4t_dir=`realpath ~/nvidia/nvidia_sdk/JetPack_4.2_Linux_P3448/Linux_for_Tegra`
           ;;
           *)
             AC_MSG_ERROR([bad value ${withval} for --with-system-type (valid:xavier, tx2, nano)])
@@ -66,7 +78,7 @@ AC_ARG_WITH(
     esac],
     [
         system_type=tx2
-        l4t_dir=`realpath -q ~/nvidia/nvidia_sdk/JetPack_4.2_Linux_P3310/Linux_for_Tegra`
+        l4t_dir=`realpath ~/nvidia/nvidia_sdk/JetPack_4.2_Linux_P3310/Linux_for_Tegra`
     ])
 
 # Change the l4t directory from the one inferred by the system type if
@@ -74,6 +86,16 @@ AC_ARG_WITH(
 if [[ -n "$l4t_override_dir" ]]; then
    l4t_dir="$l4t_override_dir"
 fi
+
+AC_SUBST([CUSTOMER], customer)
+version_suffix=''
+version_prefix=''
+if [[ "$CUSTOMER" != "d3" ]]; then
+   version_suffix="-customer"
+   version_prefix="customer-"
+fi
+AC_SUBST([VERSION_SUFFIX], [$version_suffix])
+AC_SUBST([VERSION_PREFIX], [$version_prefix])
 
 kernel_dir=`realpath ./kernel/kernel-4.9`
 m4_define(linux_build_path, "$PWD/build/kernel")
@@ -88,7 +110,6 @@ AC_SUBST([LINUX_ARGS], $linux_args)
 
 AC_SUBST([TARGET_HOST], $target_host)
 AC_SUBST([DTB_FILE], $dtb_file)
-AC_SUBST([KCONFIG_FILE], $kconfig_file)
 
 AC_SUBST([SYSTEM_TYPE], $system_type)
 AC_SUBST([L4TDIR], $l4t_dir)
@@ -96,16 +117,27 @@ AC_SUBST([L4TDIR], $l4t_dir)
 
 AC_CONFIG_FILES([
     Makefile
+    doc/Makefile
+    kernel/d3/include/d3/d3-jetson-bsp.h
+    hardware/d3/d3-jetson-bsp-version.dtsi
+    d3-jetson-util/debian/changelog
+    d3-jetson-util/target-overlay/boot/extlinux/extlinux.conf
+    d3-jetson-util/Makefile
+    doc/D3-Jetson-BSP-Release-Notes.md
+    bin/kernel-deb
 ])
 AM_SILENT_RULES([yes])
 AC_OUTPUT
 
+chmod +x bin/kernel-deb
+
 echo
 echo
-echo "-Configuration-"
+echo "-D3 Configuration-"
+echo "Customer         : customer"
+echo "Version          : d3_jetson_bsp_triplet"
 echo "System Type      : $system_type"
 echo "Target Host      : $target_host"
-[ [ "$kconfig_file" ] ] && echo "Kernel config    : $kconfig_file"
 echo "DTB File         : $dtb_file"
 echo "L4T Directory    : $l4t_dir"
 

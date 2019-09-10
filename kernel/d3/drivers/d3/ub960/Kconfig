@@ -1,0 +1,9 @@
+config D3_UB960
+	tristate "UB960 FPDLINK-III Deserializer Driver"
+	help
+	  TI ub960 deserializer (used in D3 serdes board, et. al). 
+
+# config D3_UB960TP
+# 	tristate "UB960 FPDLINK-III Test Pattern Camera Driver"
+# 	help
+# 	  TI ub960 deserializer (used in D3 serdes board, et. al). 

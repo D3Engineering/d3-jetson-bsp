@@ -1,0 +1,49 @@
+/*
+ * Copyright (c) 2018-2019, D3 Engineering.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+
+// UB960 (U1)
+#include "d3-rsp-ub960-reset.dtsi"
+#include "d3-cam-reset.dtsi"
+#define STATUS okay
+#define DES_ADDR 30
+#define RESET_PIN <&gpio_i2c_3_74 13 GPIO_ACTIVE_LOW>
+#define IOVDD_SUPPLY <&p2822_vdd_1v8_cvb>
+#define AVDD_SUPPLY <&fpd_vdd_0_3>
+#define CSI_LANES 4
+#include "d3-rsp-ub960-template.dtsi"
+
+// Channel 0
+#define DES_LINK fpd30_link0
+#define DES_LINK_PATH /proc/device-tree/i2c@3180000/ds90ub954@30/link@0
+#define SER_ADDR 38
+#define IMG_BUS 2
+#define IMG_ADDR 48
+#define PORT_IDX 0
+#define CSI_PORT 0
+#define TEGRA_SINTERFACE serial_a
+#define ENDPOINT_A 0
+#define ENDPOINT_B 1
+#define POSITION bottomleft
+#define ORIENTATION 1
+
+#ifdef CAMERA_OV10640
+#   include "d3-cam-ov10640-template.dtsi"
+#endif
+#ifdef CAMERA_IMX390
+#   include "d3-cam-imx390-template.dtsi"
+#endif
+#ifdef CAMERA_IMX390RCM
+#   include "d3-cam-imx390rcm-template.dtsi"
+#endif
+
+// TODO: Add remaining 3 channels

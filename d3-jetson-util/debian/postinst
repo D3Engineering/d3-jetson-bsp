@@ -1,0 +1,23 @@
+#!/bin/sh
+
+# Create symlinks for ISP configurations. For the case of ar0231
+# default to rgb and let the user modify later if they want to use
+# RCCB sensors.
+cd /var/nvidia/nvcam/settings/
+for p in front rear bottom top center bottomleft bottomright centerleft centerright topleft topright; do
+    TARGET_OV10640="d3_${p}_ov10640.isp"
+    TARGET_IMX390="d3_${p}_imx390.isp"
+    TARGET_AR0231="d3_${p}_ar0231.isp"
+
+    if ! [ -e "$TARGET_OV10640" ]; then
+        ln -s ov10640.isp "$TARGET_OV10640"
+    fi
+    if ! [ -e "$TARGET_IMX390" ]; then
+        ln -s imx390.isp "$TARGET_IMX390"
+    fi
+    if ! [ -e "$TARGET_AR0231" ]; then
+        ln -s ar0231-rgb.isp "$TARGET_AR0231"
+    fi
+done
+
+

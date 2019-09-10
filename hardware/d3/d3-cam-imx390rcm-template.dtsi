@@ -1,0 +1,130 @@
+/*
+ * Copyright (c) 2018-2019, D3 Engineering.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+#include "d3-cam-check.dtsi"
+#include "d3-string-utils.dtsi"
+
+&CONCAT_2(cam_module, PORT_IDX) {
+	badge = STR(CONCAT_3(d3_, POSITION, _imx390));
+	position = STR(POSITION);
+	status = STR(STATUS);
+	orientation = STR(ORIENTATION);
+
+	drivernode0 {
+		pcl_id = "v4l2_sensor";
+		devname = STR(JOIN_2(imx390, CONCAT_3(IMG_BUS,-00,IMG_ADDR)));
+		status = STR(STATUS);
+		proc-device-tree = STR(CONCAT_5(DES_LINK_PATH,/ub953@,SER_ADDR,/imx390@,IMG_ADDR));
+	};
+};
+
+&DES_LINK {
+	ub953@SER_ADDR {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		reg = <HEX_PREFIX(SER_ADDR)>;
+
+		status = STR(STATUS);
+		compatible = "d3,ub953";
+		physical-addr = <0x30>;
+
+		div-m-val = <0x1>;
+		hs-clk-div = <0x2>;
+		div-n-val = <0x25>;
+		gpio-rmten = <0x0>;
+		gpio-out-src = <0x3>;
+		gpio-out-en = <0xF>;
+		gpio-in-en = <0x0>;
+		i2c-voltage-sel = <0x0>;
+		csi-lane-count = <4>;
+		csi-continuous-clock = <1>;
+
+		imx390@IMG_ADDR {
+			status = STR(STATUS);
+			compatible = "d3,imx390";
+			reg = <HEX_PREFIX(IMG_ADDR)>;
+
+			devnode = STR(CONCAT_2(video, PORT_IDX));
+
+			mclk = "extperiph1";
+			/* 1/2.7 */
+			physical_w = "5.37";
+			physical_h = "4.04";
+			sensor_model = "imx390";
+			use_decibel_gain = "true";
+
+			physical-addr = <0x34>;
+#			include "d3-cam-imx390-modes.dtsi"
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				status = STR(STATUS);
+				port@0 {
+					reg = <0>;
+					CONCAT_2(sen_out, PORT_IDX): endpoint {
+						status = STR(STATUS);
+						port-index = <CSI_PORT>;
+						bus-width = <CSI_LANES>;
+						remote-endpoint = <&CONCAT_2(csi_in, PORT_IDX)>;
+					};
+				};
+			};
+		};
+	};
+};
+
+&vi_base {
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+			port@PORT_IDX {
+				status = STR(STATUS);
+				reg = <PORT_IDX>;
+				CONCAT_2(vi_in, PORT_IDX): endpoint {
+						status = STR(STATUS);
+						port-index = <CSI_PORT>;
+						bus-width = <CSI_LANES>;
+						remote-endpoint = <&CONCAT_2(csi_out, PORT_IDX)>;
+					};
+				};
+			};
+};
+
+&csi_base {
+	channel@PORT_IDX {
+		status = STR(STATUS);
+		reg = <PORT_IDX>;
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			port@0 {
+				status = STR(STATUS);
+				reg = <0>;
+				CONCAT_2(csi_in, PORT_IDX): endpoint@ENDPOINT_A {
+					status = STR(STATUS);
+					port-index = <CSI_PORT>;
+					bus-width = <CSI_LANES>;
+					remote-endpoint = <&CONCAT_2(sen_out, PORT_IDX)>;
+				};
+			};
+			port@1 {
+				status = STR(STATUS);
+				reg = <1>;
+				CONCAT_2(csi_out, PORT_IDX): endpoint@ENDPOINT_B {
+					status = STR(STATUS);
+					remote-endpoint = <&CONCAT_2(vi_in, PORT_IDX)>;
+				};
+			};
+		};
+	};
+};

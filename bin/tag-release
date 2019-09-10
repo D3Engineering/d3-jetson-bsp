@@ -1,0 +1,21 @@
+#!/bin/bash
+
+print_usage()
+{
+    cat <<EOF
+bin/tag-release <Tag Name> <Commit Message File>
+example: bin/tag-release D3/RELEASE/1.1.0 commit.txt
+EOF
+}
+
+[ -z "$1" ] && print_usage && exit 1
+[ -z "$2" ] && print_usage && exit 1
+
+TAG_NAME="$1"
+MSG_FILE=$(readlink -f "$2")
+
+git tag -a -s -F "$MSG_FILE" "$TAG_NAME"
+git submodule foreach "git tag -a -s -F \"$MSG_FILE\" \"$TAG_NAME\""
+
+git push --tags
+git submodule foreach 'git push --tags'

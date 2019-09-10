@@ -1,0 +1,109 @@
+---
+title: D3 Jetson BSP v@D3_JETSON_BSP_VERSION@ Release Notes
+<!-- author: \href{mailto:growe@d3engineering.com}{Greg Rowe} -->
+linkcolor: black
+toc: true
+header-includes: |
+ \usepackage{graphicx}
+ \usepackage{caption}
+ \usepackage{titling}
+ \usepackage[top=0.85in,left=1in,right=1in,footskip=0.75in,headheight=50pt,includehead]{geometry}
+
+ \usepackage{fancyhdr}
+ \pagestyle{fancy}
+ \lhead{\today}
+ \chead{\leftmark}
+ \rhead{\href{http://www.d3engineering.com}{\includegraphics[height=50pt]{img/d3_logo}}}
+ \lfoot{\url{www.d3engineering.com}}
+ \cfoot{\thetitle}
+ \rfoot{\thepage}
+ \renewcommand{\footrulewidth}{0.4pt}
+
+ \usepackage{transparent}
+ \usepackage{draftwatermark}
+ \SetWatermarkAngle{0}
+ \SetWatermarkScale{4}
+ \SetWatermarkText{\transparent{0.15}\includegraphics[height=50pt]{img/d3_logo}}
+
+---
+\thispagestyle{fancy}
+<!-- This goes on the title page -->
+<!-- \newpage -->
+<!-- \listoffigures -->
+<!-- \newpage -->
+
+# @D3_JETSON_BSP_VERSION@
+
+This release adds support Nvidia AGX Xavier.
+
+The following hardware is supported in this release:
+
+* Nvidia Jetson AGX Xavier Developer Kit with D3 DesignCore NVIDIA Jetson SerDes
+  Sensor Interface Card
+
+* Nvidia Jetson AGX Xavier Developer Kit with D3 DesignCore NVIDIA
+  Jetson 16 Channel SerDes Sensor Interface Card
+
+* Nvidia Jetson TX2 Developer Kit with D3 DesignCore NVIDIA Jetson SerDes
+  Sensor Interface Card
+
+* D3 DesignCore NVIDIA Jetson RSP-TX2 Development Kit (FPDLink-III)
+
+* D3 DesignCore D3CM-IMX390 Camera Module
+
+* D3 DesignCore D3RCM-IMX390-953 Rugged Camera Module
+
+* D3 DesignCore D3RCM-OV10640-953 Rugged Camera Module
+
+## Major Changes
+
+* There are no longer restrictions on camera ports for DesignCore
+  NVIDIA Jetson RSP-TX2 Development Kit. You may connect 0-6 cameras
+  on any port. For DesignCore NVIDIA Jetson SerDes Sensor Interface
+  Card you must connect a single camera to J6.
+
+* The base system is based on Ubuntu 18.04
+
+* There is no longer a default username and password. The user account
+  is created when you first start the system after installing JetPack
+  4.2
+
+## Installation
+
+First install Nvidia's JetPack 4.2 to your target system. Once JetPack
+4.2 is installed then apply D3's kernel, utilities, and device tree.
+
+```
+# Remove this file or the example scripts will not be included!
+sudo rm /etc/dpkg/dpkg.cfg.d/excludes
+
+# Install the kernel and D3 supporting tools
+sudo dpkg --install \
+  linux-image-4.9.140+d3-@D3_JETSON_BSP_VERSION@+_1_arm64.deb \
+  d3-jetson-util_@D3_JETSON_BSP_VERSION@-1_all.deb
+
+# Install the correct device tree for your board
+sudo dd \
+  if=d3-rsp-fpdlink-ov10640.dtb.encrypt \
+  of=/dev/disk/by-partlabel/kernel-dtb
+
+# Restart the system
+```
+
+To verify that the cameras are operational:
+```
+# N is 0 to 5
+nvgstcapture --sensor-id $N
+```
+
+An example script for viewing all cameras simultaneously is located in
+`/usr/share/doc/d3-jetson-util/examples`
+
+
+
+## Known Issues
+
+* warm boot: a warm boot (e.g. `sudo reboot`) is required for cameras
+  to be detected
+
+* imx390: poor image quality particularly in bright conditions

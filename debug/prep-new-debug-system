@@ -1,0 +1,42 @@
+#!/bin/bash
+
+[ "$UID" != "0" ] && echo 'Root access is required.' && exit 1
+
+
+boot()
+{
+    echo 'Changing owner of /boot and /lib'
+    chown -R nvidia:nvidia /boot /lib
+
+    local ext_conf='/boot/extlinux/extlinux.conf'
+    if ! [ -e "$ext_conf" ]; then
+        echo "$ext_conf does not exist, skipping"
+        return
+    fi
+
+    echo 'Copying extlinux.conf'
+    cp ~nvidia/debug/extlinux.conf "$ext_conf"
+    cp /boot/Image /boot/Image-nvidia
+
+}
+
+sudoers()
+{
+    echo 'Copying sudoers'
+    cp sudoers /etc/sudoers
+    chmod 440 /etc/sudoers
+}
+
+utils()
+{
+    echo 'Installing utilities'
+    apt-get update
+    apt-get install --assume-yes \
+            emacs-nox v4l-utils i2c-tools device-tree-compiler
+}
+
+
+
+boot
+sudoers
+utils

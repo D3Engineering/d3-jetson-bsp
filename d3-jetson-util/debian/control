@@ -1,0 +1,19 @@
+Source: d3-jetson-util
+Section: devel
+Priority: optional
+Maintainer: Greg Rowe <growe@d3engineering.com>
+Build-Depends: autotools-dev,
+               cdbs,
+               dpkg-dev (>= 1.16.1~),
+               debhelper (>= 9.0)
+Standards-Version: 3.9.6
+Homepage: http://www.d3engineering.com/
+
+Package: d3-jetson-util
+Architecture: arm64
+Pre-Depends: dpkg (>= 1.15.6~)
+Depends: ${misc:Depends}
+Recommends: v4l-utils
+Description: Supplemental materials for D3 Jetson hardware.
+ Provides additional tools for D3 Jetson hardware systems.
+

@@ -1,0 +1,19 @@
+#!/bin/bash
+set -e
+
+[ -z "$1" ] && echo "Usage jenkins-build <branch name>" && exit 1
+export GIT_BRANCH="$1"
+
+git submodule update --init --recursive
+
+# Generate the configure script from configure.ac
+./bootstrap
+
+./configure --with-l4t=/opt/nvidia/JetPack_4.2_Linux_P2888/Linux_for_Tegra
+
+# Pull in our kernel configuration
+make linux-defconfig
+cp kernel/d3/d3_defconfig kernel/kernel-4.9/.config
+
+# Build all the things in all the land.
+make release

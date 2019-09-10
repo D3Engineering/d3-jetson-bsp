@@ -1,0 +1,184 @@
+/*
+ * Copyright (c) 2018-2019, D3 Engineering. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+
+/ {
+	/* I2C_CAM, DT alias i2c2 (clock: C6, data: D6) */
+	i2c@3180000 {
+		deserializer0: deserializer@48 {
+			status = "okay";
+			compatible = "maxim,max9296";
+			reg = <0x48>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			vdd-supply = <&vdd_1v8_ap>;
+			gmsl-supply = <&vdd_bank_0>;
+			reset-gpios = <&gpio_i2c_8_74 7 GPIO_ACTIVE_LOW>;
+			gmsl-lock-gpios = <&gpio_i2c_8_74 1 GPIO_ACTIVE_HIGH>;
+			gmsl-err-gpios = <&gpio_i2c_8_74 2 GPIO_ACTIVE_HIGH>;
+			csi-tx-speed-mbps = <1600>;
+			csi-lane-count = <2>;
+			csi-continuous-clock = <1>;
+			/* interrupt-parent = <&gpio_i2c_8_74>; */
+			/* interrupts = <1 IRQ_TYPE_EDGE_BOTH 2 IRQ_TYPE_EDGE_BOTH>; */
+			/* Both serializers will be set to these bit rates.
+			 * The rates need to be specified ONLY when the
+			 * serializers come out of reset with rates that are
+			 * different than the default values.
+			 * default-forward = 6000 MHz, default-back = 197.5 MHz.
+			 * Valid rates:
+			 *   forward: 1500, 3000, 6000
+			 *   back: 187, 375, 750, 1500
+			 */
+			gmsl-bit-rates = <3000 187>;
+			ser-addr = <0x41 0x40>;
+			img-addr = <0x11 0x10>;
+
+			gmsl_link0: link@0 {
+				reg = <0>;
+				#address-cells = <1>;
+				#size-cells = <0>;
+			};
+		};
+		deserializer1: deserializer@4a {
+			status = "okay";
+			compatible = "maxim,max9296";
+			reg = <0x4a>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			vdd-supply = <&vdd_1v8_ap>;
+			gmsl-supply = <&vdd_bank_0>;
+			reset-gpios = <&gpio_i2c_8_74 15 GPIO_ACTIVE_LOW>;
+			gmsl-lock-gpios = <&gpio_i2c_8_74 9 GPIO_ACTIVE_HIGH>;
+			gmsl-err-gpios = <&gpio_i2c_8_74 10 GPIO_ACTIVE_HIGH>;
+			csi-tx-speed-mbps = <1600>;
+			csi-lane-count = <2>;
+			csi-continuous-clock = <1>;
+			/* interrupt-parent = <&gpio_i2c_8_74>; */
+			/* interrupts = <9 IRQ_TYPE_EDGE_BOTH 0xa IRQ_TYPE_EDGE_BOTH>; */
+			gmsl-bit-rates = <3000 187>;
+			ser-addr = <0x42 0x40>;
+			img-addr = <0x12 0x10>;
+
+			gmsl_link1: link@0 {
+				reg = <0>;
+				#address-cells = <1>;
+				#size-cells = <0>;
+			};
+		};
+		deserializer2: deserializer@68 {
+			status = "okay";
+			compatible = "maxim,max9296";
+			reg = <0x68>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			vdd-supply = <&vdd_1v8_ap>;
+			gmsl-supply = <&vdd_bank_0>;
+			reset-gpios = <&gpio_i2c_8_75 7 GPIO_ACTIVE_LOW>;
+			gmsl-lock-gpios = <&gpio_i2c_8_75 1 GPIO_ACTIVE_HIGH>;
+			gmsl-err-gpios = <&gpio_i2c_8_75 2 GPIO_ACTIVE_HIGH>;
+			csi-tx-speed-mbps = <1600>;
+			csi-lane-count = <2>;
+			csi-continuous-clock = <1>;
+			/* interrupt-parent = <&gpio_i2c_8_75>; */
+			/* interrupts = <1 IRQ_TYPE_EDGE_BOTH 2 IRQ_TYPE_EDGE_BOTH>; */
+			ser-addr = <0x43 0x40>;
+			img-addr = <0x13 0x10>;
+
+			gmsl_link2: link@0 {
+				reg = <0>;
+				#address-cells = <1>;
+				#size-cells = <0>;
+			};
+		};
+		deserializer3: deserializer@6c {
+			status = "okay";
+			compatible = "maxim,max9296";
+			reg = <0x6c>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			vdd-supply = <&vdd_1v8_ap>;
+			gmsl-supply = <&vdd_bank_1>;
+			reset-gpios = <&gpio_i2c_8_75 15 GPIO_ACTIVE_LOW>;
+			gmsl-lock-gpios = <&gpio_i2c_8_75 9 GPIO_ACTIVE_HIGH>;
+			gmsl-err-gpios = <&gpio_i2c_8_75 10 GPIO_ACTIVE_HIGH>;
+			csi-tx-speed-mbps = <1600>;
+			csi-lane-count = <2>;
+			csi-continuous-clock = <1>;
+			/* interrupt-parent = <&gpio_i2c_8_75>; */
+			/* interrupts = <9 IRQ_TYPE_EDGE_BOTH 0xa IRQ_TYPE_EDGE_BOTH>; */
+			ser-addr = <0x44 0x40>;
+			img-addr = <0x14 0x10>;
+
+			gmsl_link3: link@0 {
+				reg = <0>;
+				#address-cells = <1>;
+				#size-cells = <0>;
+			};
+		};
+	};
+
+	/* I2C_GP0, DT alias: i2c1 (clock: E15, data: D15) */
+	i2c@c240000 {
+		deserializer4: deserializer@48 {
+			status = "okay";
+			compatible = "maxim,max9296";
+			reg = <0x48>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			vdd-supply = <&vdd_1v8_ap>;
+			gmsl-supply = <&vdd_bank_1>;
+			reset-gpios = <&gpio_i2c_8_76 7 GPIO_ACTIVE_LOW>;
+			gmsl-lock-gpios = <&gpio_i2c_8_76 1 GPIO_ACTIVE_HIGH>;
+			gmsl-err-gpios = <&gpio_i2c_8_76 2 GPIO_ACTIVE_HIGH>;
+			csi-tx-speed-mbps = <1600>;
+			csi-lane-count = <2>;
+			csi-continuous-clock = <1>;
+			/* interrupt-parent = <&gpio_i2c_8_76>; */
+			/* interrupts = <1 IRQ_TYPE_EDGE_BOTH 2 IRQ_TYPE_EDGE_BOTH>; */
+			//gmsl-bit-rates = <6000 187>;
+			ser-addr = <0x45 0x40>;
+			img-addr = <0x15 0x10>;
+
+			gmsl_link4: link@0 {
+				reg = <0>;
+				#address-cells = <1>;
+				#size-cells = <0>;
+			};
+		};
+		deserializer5: deserializer@4a {
+			status = "okay";
+			compatible = "maxim,max9296";
+			reg = <0x4a>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			vdd-supply = <&vdd_1v8_ap>;
+			gmsl-supply = <&vdd_bank_1>;
+			reset-gpios = <&gpio_i2c_8_76 15 GPIO_ACTIVE_LOW>;
+			gmsl-lock-gpios = <&gpio_i2c_8_76 9 GPIO_ACTIVE_HIGH>;
+			gmsl-err-gpios = <&gpio_i2c_8_76 10 GPIO_ACTIVE_HIGH>;
+			csi-tx-speed-mbps = <1600>;
+			csi-lane-count = <2>;
+			csi-continuous-clock = <1>;
+			/* interrupt-parent = <&gpio_i2c_8_76>; */
+			/* interrupts = <9 IRQ_TYPE_EDGE_BOTH 0xa IRQ_TYPE_EDGE_BOTH>; */
+			ser-addr = <0x46 0x40>;
+			img-addr = <0x16 0x10>;
+
+			gmsl_link5: link@0 {
+				reg = <0>;
+				#address-cells = <1>;
+				#size-cells = <0>;
+			};
+		};
+	};
+};

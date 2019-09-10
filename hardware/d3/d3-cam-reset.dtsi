@@ -1,0 +1,30 @@
+/*
+ * Copyright (c) 2018-2019, D3 Engineering.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+#undef DES_LINK
+#undef DES_LINK_PATH
+#undef DES_ADDR
+#undef SER_ADDR
+#undef IMG_BUS
+#undef IMG_ADDR
+#undef PORT_IDX
+#undef CSI_PORT
+#undef CSI_LANES
+#undef RESET_PIN
+#undef STATUS
+#undef TEGRA_SINTERFACE
+#undef ENDPOINT_A
+#undef ENDPOINT_B
+#undef POSITION
+#undef ORIENTATION
+#undef GMSL_RESET_BIT_RATES
+#undef EEPROM_ADDR

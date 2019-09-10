@@ -1,0 +1,43 @@
+#!/bin/bash
+
+set -e
+
+print_usage()
+{
+    cat <<EOF
+Usage kernel-dev CUSTOMER VERSION-NUMBER [package-revision]
+EOF
+}
+
+REVISION='1'
+[ -z "$1" ] && print_usage && exit 1
+[ -z "$2" ] && print_usage && exit 1
+[ -n "$3" ] && REVISION="$3"
+
+export CONCURRENCY_LEVEL=$(grep -c '^processor' /proc/cpuinfo)
+CUSTOMER="$1"
+VERSION="$2"
+
+export D3_JETSON_BSP_BUILDID=\"$(uuidgen -r)\"
+export L4TDIR='/home/growe/nvidia/nvidia_sdk/JetPack_4.2_Linux_P3310/Linux_for_Tegra'
+
+OVERLAY=$(realpath 'debian-overlay/')
+
+# Force the build-ids to be regenerated for dtb and kernel so that
+# they match.
+touch hardware/*/*.dts
+touch kernel/d3/drivers/d3/build-id/*.c
+pushd kernel/kernel-4.9
+
+N_CPU=$(grep -c ^processor /proc/cpuinfo)
+
+make-kpkg \
+    --jobs $N_CPU \
+    --rootcmd fakeroot \
+    --cross-compile aarch64-linux-gnu- \
+    --arch arm64 \
+    --revision "$REVISION" \
+    --append-to-version "+$VERSION-$CUSTOMER" \
+    --overlay-dir "$OVERLAY" \
+    kernel_image
+popd

@@ -1,0 +1,4 @@
+config D3_IMX390
+	tristate "IMX390 Camera Driver"
+	help
+	  D3 IMX390 Camera Driver for Nvidia Tegra systems.

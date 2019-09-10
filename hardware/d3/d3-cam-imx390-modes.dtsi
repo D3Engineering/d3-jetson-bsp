@@ -1,0 +1,110 @@
+/*
+ * Copyright (c) 2018-2019, D3 Engineering.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+#ifdef IMX390_COMMON
+#	undef IMX390_COMMON
+#endif
+#define IMX390_COMMON					\
+	mclk_khz = "25000";				\
+	num_lanes = STR(CSI_LANES);			\
+	tegra_sinterface = STR(TEGRA_SINTERFACE);	\
+	discontinuous_clk = "no";			\
+	dpcm_enable = "false";				\
+	cil_settletime = "0";				\
+	csi_pixel_bit_depth = "12";			\
+	pixel_phase = "rggb";				\
+	active_w = "1936";				\
+	active_h = "1100";				\
+	readout_orientation = "0";			\
+	inherent_gain = "1";				\
+	serdes_pix_clk_hz = "535000000";		\
+	pix_clk_hz = "148500000";			\
+	embedded_metadata_height = "1";			\
+	min_hdr_ratio = "20.89";			\
+	max_hdr_ratio = "20.89"
+#ifdef IMX390_LINEAR_COMMON
+#	undef IMX390_LINEAR_COMMON
+#endif
+#define IMX390_LINEAR_COMMON			\
+	IMX390_COMMON;				\
+	mode_type = "bayer";			\
+	line_length = "4400";			\
+	min_gain_val = "0";			\
+	max_gain_val = "30";			\
+	min_framerate = "30";			\
+	max_framerate = "30";			\
+	min_exp_time = "30";			\
+	max_exp_time = "33333";			\
+	dynamic_pixel_bit_depth = "12";		\
+	num_control_point = "0"
+
+
+/* HDR */
+mode0 {
+	IMX390_COMMON;
+	mode_type = "bayer_wdr_pwl";
+
+	/* 60 fps */
+	line_length = "2200";
+
+	/* Gain is currently fixed in HDR mode */
+	min_gain_val = "0";
+	max_gain_val = "0";
+
+	min_framerate = "60";
+	max_framerate = "60";
+
+	/* Units are microseconds */
+	min_exp_time = "11000";
+	max_exp_time = "11000";
+
+	/* Xavier supports up to 20bpp, Tx2 supports up to 24bpp */
+	dynamic_pixel_bit_depth = "20";
+	/* Xavier supports up to 9 control points. */
+	num_control_point = "9";
+	control_point_x_0="384";
+	control_point_y_0="384";
+	control_point_x_1="1600";
+	control_point_y_1="789";
+	control_point_x_2="3700";
+	control_point_y_2="1022";
+	control_point_x_3="24000";
+	control_point_y_3="1278";
+	control_point_x_4="73000";
+	control_point_y_4="1586";
+	control_point_x_5="210392";
+	control_point_y_5="2019";
+	control_point_x_6="1500000";
+	control_point_y_6="2415";
+	control_point_x_7="5000000";
+	control_point_y_7="2951";
+	control_point_x_8="16777215";
+	control_point_y_8="3854";
+};
+
+/* SP2h */
+mode1 {
+	IMX390_LINEAR_COMMON;
+};
+
+/* SP1H */
+mode2 {
+	IMX390_LINEAR_COMMON;
+};
+
+/* SP1L */
+mode3 {
+	IMX390_LINEAR_COMMON;
+};
+
+
+
