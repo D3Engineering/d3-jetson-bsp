@@ -1,0 +1,44 @@
+#!/bin/bash
+#
+# A simple script to simplify writing a signed DTB to the correct partition
+# This will show all dtbs in /usr/lib/(selected kernel)/ that do not start with
+# "tegra". "tegra*" dtbs are assumed to be from Nvidia.
+#
+# Copyright (c) 2019, D3 Engineering.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; version 2 of the License.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+[[ -t 0 && -t 1 ]] || { echo "Can't run - not on a terminal" ; exit ; }
+
+shopt -s extglob
+ME="\e[34m[d3-install-dtb]\e[39m"
+ROOT_DTB_DIR="/usr/lib"
+cd $ROOT_DTB_DIR
+
+echo -e "$ME Choose an installed D3 BSP release"
+select LIMAGE in ./linux-image*; do
+    test -n "$LIMAGE" && break
+    echo "$ME Select a valid d3 bsp kernel release"
+done
+
+DTB_DIR="$ROOT_DTB_DIR/$LIMAGE"
+
+cd $DTB_DIR # cd for the sake of select output
+echo -e "$ME Choose a dtb to install"
+select DTB in ./!(tegra*)+(.dtb.encrypt); do
+    test -n "$DTB" && break
+    echo "$ME Select a valid signed dtb"
+done
+
+if sudo dd if=$DTB of="/dev/disk/by-partlabel/kernel-dtb"; then
+    echo -e "$ME \e[32mkernel-dtb has been flashed!\e[39m"
+else
+    echo -e "$ME \e[31mdd has failed to write dtb!\e[39m"
+fi

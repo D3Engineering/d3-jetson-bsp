@@ -1,0 +1,61 @@
+/*
+ * Copyright (c) 2019, D3 Engineering. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+
+// Resets all values USED or MADE by a cam template
+
+#include "templated-cameras/d3-reset-cam.dtsi"
+#include "templated-serializers/d3-reset-ser.dtsi"
+#include "templated-deserializers/d3-reset-des.dtsi"
+
+#undef DES_NODE
+#undef DES_LINK_NODE
+#undef DES_LINK_PATH
+#undef DES_LINK
+#undef SER_MODEL
+#undef SEN_OUT_NODE
+#undef SEN_PATH
+#undef SER_NODE_OVERLAY
+#undef DES_PATH
+#undef SER_ADDR
+#undef IMG_BUS
+#undef IMG_ADDR
+#undef CSI_PORT
+#undef CSI_LANES
+#undef RESET_PIN
+#undef STATUS
+#undef TEGRA_SINTERFACE
+#undef ENDPOINT_A
+#undef ENDPOINT_B
+#undef POSITION
+#undef IS_ENABLED
+#undef IMG_BUS
+#undef I2C_ADDR
+#undef DES_ADDR
+#undef ORIENTATION
+#undef GMSL_LINK
+#undef GMSL_RESET_BIT_RATES
+#undef EEPROM_ADDR
+#undef AVDD_SUPPLY
+#undef CAM_MODULE
+#undef PORT_IDX
+#undef ERR_GPIO
+#undef INTERRUPTS
+#undef INTERRUPT_GPIO
+#undef LOCK_GPIO
+#undef RESET_PIN
+#undef FPD_PASS_GPIO
+#undef FPD_LOCK_GPIO
+#undef I2C_BASE_PATH
+#undef CAM_NODE_NAME
+#undef PORT_VCID
+

@@ -1,0 +1,85 @@
+/*
+ * Copyright (c) 2019, D3 Engineering. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+
+#include "d3-reset-des.dtsi"
+#include "d3-check-des.dtsi"
+
+#define DES_NAME ub960
+#define DES_PATH CONCAT_3(\
+I2C_BASE_PATH,/,\
+CONCAT_3(DES_NAME,@,DES_ADDR))
+
+#define DES_NODE CONCAT_3(DES_NAME,_,DES_ADDR)
+
+/ {
+	CONCAT_2(i2c@,I2C_ADDR) {
+		/* Deserializer */
+		DES_NODE: DES_NAME@DES_ADDR {
+			status = STR(STATUS);
+			/* the ub920 driver can operate the 954 */
+			compatible = "d3,ub960";
+			reg = <HEX_PREFIX(DES_ADDR)>;
+			iovdd-supply = IOVDD_SUPPLY;
+			avdd-supply = AVDD_SUPPLY;
+			pdb-gpios = RESET_PIN;
+			csi-lane-count = <CSI_LANES>;
+			csi-tx-speed-mbps = <1600>;
+			csi-continuous-clock = <1>;
+
+			/* Frame Synchronization Mode (FS_MODE field in FS_CTL register)
+			 *
+			 * 0x0 = internally generated framesync
+			 * 0x8 = external framesync from gpio 0
+			 * 0x9 = external framesync from gpio 1
+			 * 0xa = external framesync from gpio 2
+			 * 0xb = external framesync from gpio 3
+			 *
+			 * If this field is omitted, 0x0 is used.  It's value can be ignored
+			 * if the imager is not operating in a triggered mode.
+			 */
+			frame-sync-mode = <8>;
+
+			/* Internally generated FrameSync's high and low time, in microseconds.
+			 *
+			 * If these fields are omitted, they are configured for 15 ms high,
+			 * 35 ms low (20 Hz). Their value can be ignored if an internal
+			 * FrameSync is not being used
+			 */
+			frame-sync-high-time-us = <15000>;
+			frame-sync-low-time-us = <35000>;
+
+			#address-cells = <1>;
+			#size-cells = <0>;
+			CONCAT_2(DES_NODE,_link0): link@0 {
+				reg = <0>;
+				#address-cells = <1>;
+				#size-cells = <0>;
+			};
+			CONCAT_2(DES_NODE,_link1): link@1 {
+				reg = <1>;
+				#address-cells = <1>;
+				#size-cells = <0>;
+			};
+			CONCAT_2(DES_NODE,_link2): link@2 {
+				reg = <2>;
+				#address-cells = <1>;
+				#size-cells = <0>;
+			};
+			CONCAT_2(DES_NODE,_link3): link@3 {
+				reg = <3>;
+				#address-cells = <1>;
+				#size-cells = <0>;
+			};
+		};
+	};
+};

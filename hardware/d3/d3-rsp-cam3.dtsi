@@ -1,0 +1,108 @@
+/*
+ * Copyright (c) 2018-2019, D3 Engineering. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+
+#include "d3-reset-full.dtsi"
+#define CSI_PORT 3
+#define STATUS disabled
+#define TEGRA_SINTERFACE serial_d
+#define POSITION topleft
+#define ORIENTATION 1
+#define ENDPOINT_A 6
+#define ENDPOINT_B 7
+#define ORIENTATION 1
+#define IOVDD_SUPPLY <&vdd_1v8_ap>
+#define AVDD_SUPPLY <&vdd_1v8_ap>
+#define RESET_PIN <&gpio_i2c_8_75 13 GPIO_ACTIVE_LOW>
+#define EEPROM_ADDR 58
+#define PORT_VCID 0
+
+#define DES_LINK 0
+
+#ifdef D3_BOARD_RSP_FPDLINK
+#	define I2C_ADDR 3180000
+#	define I2C_BASE_PATH CONCAT_2(/proc/device-tree/i2c@,I2C_ADDR)
+#	define CSI_LANES 2
+/* UB960 */
+#	define RESET_PIN <&gpio_i2c_8_75 13 GPIO_ACTIVE_LOW>
+#	define FPD_PASS_GPIO <&gpio_i2c_8_75 14 GPIO_ACTIVE_HIGH>
+#	define FPD_LOCK_GPIO <&gpio_i2c_8_75 15 GPIO_ACTIVE_HIGH>
+#	define DES_ADDR 36
+#	include "templated-deserializers/d3-des-ub960-template.dtsi"
+/* UB954 */
+#	define IMG_ADDR 4e
+#	define IMG_BUS 2
+#	define SER_ADDR 42
+#	include "templated-serializers/d3-ser-ub953-template.dtsi"
+/* Possible Cams */
+#	include "d3-tegra-nvcsi.dtsi"
+#	include "templated-cameras/d3-cam-ov10640-template.dtsi"
+#	include "templated-cameras/d3-cam-imx390-template.dtsi"
+#	include "templated-cameras/d3-cam-imx390rcm-template.dtsi"
+#	include "templated-cameras/d3-cam-vg6768-template.dtsi"
+#	include "templated-cameras/d3-cam-ar0820-fpdlink-template.dtsi"
+#endif
+
+
+#ifdef D3_BOARD_RSP_GMSL1
+#	define I2C_ADDR 3180000
+#	define I2C_BASE_PATH CONCAT_2(/proc/device-tree/i2c@,I2C_ADDR)
+#	define CSI_LANES 2
+/* MAX9286 */
+#	define DES_ADDR 68
+#	define ERR_GPIO <&gpio_i2c_8_75 10 GPIO_ACTIVE_HIGH>
+#	define INTERRUPT_GPIO <&gpio_i2c_8_75>
+#	define INTERRUPTS <9 IRQ_TYPE_EDGE_BOTH 0xa IRQ_TYPE_EDGE_BOTH>
+#	define LOCK_GPIO <&gpio_i2c_8_75 9 GPIO_ACTIVE_HIGH>
+#	define RESET_PIN <&gpio_i2c_8_75 15 GPIO_ACTIVE_LOW>
+#	define SER_ADDR <0x44 0x40>
+#	define IMG_ADDR <0x14 0x10>
+#	define GMSL_LINK gmsl_link0
+#	include "templated-deserializers/d3-des-max9286-template.dtsi"
+#	undef SER_ADDR
+#	undef IMG_ADDR
+/* generic cam info */
+#	define GMSL_RESET_BIT_RATES <3000 187>
+#	include "d3-tegra-nvcsi.dtsi"
+#	define IMG_BUS 16
+#	define IMG_ADDR 14
+#	define SER_ADDR 44
+#endif
+
+
+#ifdef D3_BOARD_RSP_GMSL2
+#	define I2C_ADDR 3180000
+#	define I2C_BASE_PATH CONCAT_2(/proc/device-tree/i2c@,I2C_ADDR)
+#	define CSI_LANES 2
+/* MAX9296 */
+#	define DES_ADDR 6c
+#	define ERR_GPIO <&gpio_i2c_8_75 10 GPIO_ACTIVE_HIGH>
+#	define INTERRUPT_GPIO <&gpio_i2c_8_75>
+#	define INTERRUPTS <9 IRQ_TYPE_EDGE_BOTH 0xa IRQ_TYPE_EDGE_BOTH>
+#	define LOCK_GPIO <&gpio_i2c_8_75 9 GPIO_ACTIVE_HIGH>
+#	define RESET_PIN <&gpio_i2c_8_75 15 GPIO_ACTIVE_LOW>
+#	define SER_ADDR <0x44 0x40>
+#	define IMG_ADDR <0x14 0x10>
+#	define GMSL_LINK gmsl_link0
+#	include "templated-deserializers/d3-des-max9296-template.dtsi"
+#	undef SER_ADDR
+#	undef IMG_ADDR
+/* generic cam info */
+#	define GMSL_RESET_BIT_RATES <3000 187>
+#	define IMG_BUS 20
+#	define IMG_ADDR 14
+#	define SER_ADDR 44
+/* ar0820 */
+#	include "d3-tegra-nvcsi.dtsi"
+#	include "templated-serializers/d3-ser-max9295-template.dtsi"
+#	include "templated-cameras/d3-cam-ar0820-template.dtsi"
+#endif

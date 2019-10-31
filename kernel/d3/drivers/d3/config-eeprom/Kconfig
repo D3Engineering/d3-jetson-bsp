@@ -1,0 +1,5 @@
+config D3_CONFIG_EEPROM
+	bool "Configuration EEPROM"
+	depends on NVMEM
+	help
+	  D3 A driver that accesses a configuration EEPROM.

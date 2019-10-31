@@ -1,0 +1,14 @@
+TIMEOUT 30
+DEFAULT d3
+
+MENU TITLE D3 boot options
+
+LABEL d3
+    MENU LABEL D3
+    LINUX /boot/vmlinuz-4.9.140+@D3_JETSON_BSP_VERSION@-@CUSTOMER@+
+    APPEND ${cbootargs} root=/dev/mmcblk0p1 rw rootwait rootfstype=ext4
+
+LABEL nvidia
+    MENU LABEL Nvidia Original
+    LINUX /boot/Image
+    APPEND ${cbootargs} root=/dev/mmcblk0p1 rw rootwait rootfstype=ext4

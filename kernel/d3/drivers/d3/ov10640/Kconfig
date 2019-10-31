@@ -1,0 +1,10 @@
+config D3_OV10640
+	depends on OF
+	tristate "OV10640 Camera Driver"
+	help
+	  D3 OV10640 Camera Driver for Nvidia Tegra systems including Jetson Tx2.
+config D3_OV10640_HDR_ENABLE
+    bool "OV10640 HDR Mode"
+    depends on D3_OV10640
+    help
+      Enable HDR mode for D3 ov10640 driver

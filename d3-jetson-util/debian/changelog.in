@@ -1,0 +1,6 @@
+d3-jetson-util (@D3_JETSON_BSP_VERSION@@VERSION_SUFFIX@-1) unstable; urgency=low
+
+  * D3 Utilities for Jetson (see release notes for changes)
+
+ -- Greg Rowe <growe@d3engineering.com>  Fri, 10 May 2019 14:18:26 -0500
+

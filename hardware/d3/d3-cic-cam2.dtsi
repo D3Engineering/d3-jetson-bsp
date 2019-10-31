@@ -1,0 +1,36 @@
+/*
+ * Copyright (c) 2019, D3 Engineering. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+
+#include "d3-reset-full.dtsi"
+
+#define CSI_PORT 2
+#define CSI_LANES 4
+#define DES_NODE max9296
+#define ENDPOINT_A 4
+#define ENDPOINT_B 5
+#define TEGRA_SINTERFACE serial_c
+#define STATUS disabled
+#define DES_PATH /proc/device-tree/i2c@3180000/mux@70/i2c@1/max9296@48
+#define GMSL_RESET_BIT_RATES <3000 187>
+#define IMG_BUS 40
+#define IMG_ADDR 10
+#define SER_ADDR 62
+#define EEPROM_ADDR 54
+#define POSITION centerright
+#define ORIENTATION 1
+#define PORT_VCID 0
+#define DES_LINK 0
+
+#include "d3-tegra-nvcsi.dtsi"
+#include "templated-serializers/d3-ser-max9295-template.dtsi"
+#include "templated-cameras/d3-cam-ar0820-template.dtsi"

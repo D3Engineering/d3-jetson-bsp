@@ -1,0 +1,9 @@
+# Provide symlinks that correspond to the physical connections.
+# Match against the image sensor address. This is fixed on a per-port basis.
+
+SUBSYSTEM=="video4linux",ATTR{name}=="vi-output, * 2-0048", SYMLINK+="d3-cam0"
+SUBSYSTEM=="video4linux",ATTR{name}=="vi-output, * 2-004a", SYMLINK+="d3-cam1"
+SUBSYSTEM=="video4linux",ATTR{name}=="vi-output, * 2-004c", SYMLINK+="d3-cam2"
+SUBSYSTEM=="video4linux",ATTR{name}=="vi-output, * 2-004e", SYMLINK+="d3-cam3"
+SUBSYSTEM=="video4linux",ATTR{name}=="vi-output, * 2-0050", SYMLINK+="d3-cam4"
+SUBSYSTEM=="video4linux",ATTR{name}=="vi-output, * 2-0052", SYMLINK+="d3-cam5"

@@ -1,0 +1,43 @@
+config D3_SERDES_COMMON
+	tristate "GMSL serializers/deserializers"
+	help
+	  Say Y here if you want to add support for the GMSL
+	  serializers/deserializers.
+	  If unsure, say N.
+
+config D3_MAX9296
+	tristate "MAX9296A GMSL2 Deserializer Driver"
+	depends on D3_SERDES_COMMON
+	help
+	  Say Y here if you want to add support for the MAX9296A deserializer.
+	  To compile this driver as a module, choose M here; the module will
+	  be called max9296.
+	  If unsure, say N.
+
+config D3_MAX9286
+	tristate "MAX9286 GMSL1 Deserializer Driver"
+	depends on D3_SERDES_COMMON
+	help
+	  Say Y here if you want to add support for the MAX9286 deserializer.
+	  To compile this driver as a module, chose M here; the module will
+	  be called max9286.
+	  If unsure, say N.
+
+config D3_MAX9295
+	tristate "MAX9295 GMSL2 Serializer Driver"
+	depends on D3_SERDES_COMMON
+	depends on D3_MAX9296
+	help
+	  Say Y here if you want to add support for the MAX9295 GMSL2 serializer.
+	  To compile this driver as a module, chose M here; the module will
+	  be called max9295.
+	  If unsure, say N.
+
+config D3_MAX96705
+	tristate "MAX96705 GMSL1 Serializer Driver"
+	depends on D3_SERDES_COMMON
+	help
+	  Say Y here if you want to add support for the MAX96705 GMSL1 serializer.
+	  To compile this driver as a module, chose M here; the module will
+	  be called max96705.
+	  If unsure, say N.

@@ -1,0 +1,15 @@
+#!/bin/bash
+
+rm -f \
+   kernel/d3/drivers/d3/imx390/modules.builtin \
+   kernel/d3/drivers/d3/modules.builtin \
+   kernel/d3/drivers/d3/ov10640/modules.builtin \
+   kernel/d3/drivers/d3/ub953/modules.builtin \
+   kernel/d3/drivers/d3/ub960/modules.builtin
+
+cd kernel/kernel-4.9
+make mrproper
+rm -rf \
+   arch/arm64/boot/dts/_ddot_/ \
+   arch/arm64/boot/dts/tegra186-quill-p3310-1000-a00-overlay.dtbo \
+   drivers/video/tegra/host/

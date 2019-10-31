@@ -1,0 +1,27 @@
+/*
+ * Copyright (c) 2019, D3 Engineering. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+
+/*
+ * Device tree for the FPDLink version of the RSP board
+ * Include:
+ *  - the common parts of the base board (d3-rsp-dtsi)
+ *  - the FPDLink deserializers (d3-rsp-fpdlink-des.dtsi)
+ *  - the camera modules
+ */
+#include "d3-rsp.dtsi"
+#include "d3-rsp-cam0.dtsi"
+#include "d3-rsp-cam1.dtsi"
+#include "d3-rsp-cam2.dtsi"
+#include "d3-rsp-cam3.dtsi"
+#include "d3-rsp-cam4.dtsi"
+#include "d3-rsp-cam5.dtsi"

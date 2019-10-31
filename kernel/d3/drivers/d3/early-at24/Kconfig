@@ -1,0 +1,6 @@
+config D3_EARLY_AT24
+	bool "EEPROM driver for D3 CIC (AT24-compatible)"
+	depends on NVMEM
+	help
+	  D3 Permits reading configuration from an AT24-compatible EEPROM,
+	  such as the 24AA1026 on the D3 Camera Interface Card.

@@ -1,0 +1,35 @@
+/*
+ * Copyright (c) 2018-2019, D3 Engineering. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+
+#ifndef SER_ADDR
+#	error "Missing definition: SER_ADDR"
+#endif
+#ifndef CSI_PORT
+#	error "Missing definition: CSI_PORT"
+#endif
+// Compatibility for where port_idx corresponds to csi_port
+#ifndef PORT_IDX
+#	define PORT_IDX CSI_PORT
+#endif
+#ifndef DES_PATH
+#	error "Missing definition: DES_PATH"
+#endif
+#ifndef IMG_BUS
+#	error "Missing definition: IMG_BUS"
+#endif
+#ifndef STATUS
+#	define STATUS disabled
+#endif
+#ifndef DES_LINK
+#   error "Missing definition: DES_LINK"
+#endif

@@ -1,0 +1,7 @@
+[*]
+end_of_line = LF
+indent_style = space
+indent_size = 4
+
+[extlinux.conf]
+indent_size = 6

@@ -1,0 +1,9 @@
+#!/bin/sh
+
+# Save extlinux.conf so the system doesn't get semi-bricked if the
+# utils package is uninstalled.
+
+E_CONF='/boot/extlinux/extlinux.conf'
+if [ -e "$E_CONF" ]; then
+    cp "$E_CONF" "${E_CONF}-"
+fi

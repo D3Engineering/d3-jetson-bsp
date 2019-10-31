@@ -1,0 +1,44 @@
+#!/usr/bin/make -f
+
+# Uncomment this to turn on verbose mode .
+# export DH_VERBOSE =1
+build:
+	$(MAKE)
+
+clean:
+	dh_testdir
+	dh_testroot
+	rm -f build - stamp configure - stamp
+	$(MAKE) clean
+	dh_prep
+
+install: build
+	dh_testdir
+	dh_testroot
+	dh_prep
+	dh_installdirs
+	$(MAKE) DESTDIR=$(CURDIR)/debian/d3-jetson-util install
+
+
+# Build architecture - independent files here .
+binary-indep: build install
+# Build architecture - dependent files here .
+binary-arch: build install
+	dh_testdir
+	dh_testroot
+	dh_installchangelogs
+	dh_installdocs
+	dh_installexamples
+	dh_install
+	dh_installman
+	dh_link
+	dh_strip
+	dh_compress
+	dh_fixperms
+	dh_installdeb
+	dh_perl
+	dh_gencontrol
+	dh_md5sums
+	dh_builddeb
+binary: binary-indep binary-arch
+.PHONY: build clean binary-indep binary-arch binary install configure

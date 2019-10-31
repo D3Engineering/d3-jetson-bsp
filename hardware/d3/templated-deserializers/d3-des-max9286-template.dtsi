@@ -1,0 +1,56 @@
+/*
+ * Copyright (c) 2019, D3 Engineering. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+
+#include "d3-reset-des.dtsi"
+#include "d3-check-des.dtsi"
+
+#define DES_NAME max9286
+#define DES_PATH CONCAT_3(\
+I2C_BASE_PATH,/,\
+CONCAT_3(DES_NAME,@,DES_ADDR))
+
+#define DES_NODE CONCAT_3(DES_NAME,_,DES_ADDR)
+
+/ {
+	CONCAT_2(i2c@,I2C_ADDR) {
+		DES_NODE: DES_NAME@DES_ADDR {
+			status = "okay";
+			/* We must force on all deserializers for proper bus
+			 * ordering to occur */
+			compatible = "maxim,max9286";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			vdd-supply = <&vdd_1v8_ap>;
+			gmsl-supply = <&vdd_bank_0>;
+			csi-tx-speed-mbps = <1600>;
+			csi-lane-count = <2>;
+			csi-continuous-clock = <1>;
+			gmsl-1;
+			/* variable properties */
+			reg = <HEX_PREFIX(DES_ADDR)>;
+			reset-gpios = RESET_PIN;
+			gmsl-lock-gpios = LOCK_GPIO;
+			gmsl-err-gpios = ERR_GPIO;
+			interrupt-parent = INTERRUPT_GPIO;
+			interrupts = INTERRUPTS;
+			ser-addr = SER_ADDR;
+			img-addr = IMG_ADDR;
+
+			CONCAT_2(DES_NODE,_link0): link@0 {
+				reg = <0>;
+				#address--cells = <1>;
+				#size-cells = <0>;
+			};
+		};
+	};
+};

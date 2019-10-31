@@ -1,0 +1,160 @@
+/*
+ * Copyright (c) 2019, D3 Engineering. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+
+
+
+#ifndef SEN_PATH
+#	error "Missing definition: SEN_PATH"
+#endif
+#ifndef CSI_PORT
+#	error "Missing definition: CSI_PORT"
+#endif
+#ifndef CAM_NODE
+#	error "Missing definition: CAM_NODE"
+#endif
+#ifndef VI_PORT_NODE
+#	error "Missing definition: VI_PORT_NODE"
+#endif
+#ifndef VI_IN_NODE
+#	error "Missing definition: VI_IN_NODE"
+#endif
+#ifndef CHAN_NODE
+#	error "Missing definition: CHAN_NODE"
+#endif
+#ifndef CSI_IN_NODE
+#	error "Missing definition: CSI_IN_NODE"
+#endif
+#ifndef CSI_OUT_NODE
+#	error "Missing definition: CSI_OUT_NODE"
+#endif
+#ifndef SER_NODE
+#	error "Missing definition: SER_NODE"
+#endif
+#ifndef CAM_MODULE_NODE
+#	error "Missing definition: CAM_MODULE_NODE"
+#endif
+#ifndef SER_NODE_OVERLAY
+#	error "Missing definition: SER_NODE_OVERLAY"
+#endif
+#ifndef POSITION
+#	error "Missing definition: POSITION"
+#endif
+#ifndef CAM_MODEL
+#	error "Missing definition: CAM_MODEL"
+#endif
+#ifndef IMG_ADDR
+#	error "Missing definition: IMG_ADDR"
+#endif
+#ifndef IMG_BUS
+#	error "Missing definition: IMG_BUS"
+#endif
+#ifndef SEN_OUT_NODE
+#	error "Missing definition: SEN_OUT_NODE"
+#endif
+#ifndef DES_NODE
+#	error "Missing definition: DES_NODE"
+#endif
+#ifndef DRIVER_NAME
+#	define DRIVER_NAME CAM_MODEL
+#endif
+
+
+/{
+	overlay-loader {
+		fragment-d3-CAM_MODEL@PORT_IDX {
+			param = STR(CAM_NODE);
+			override@0 {
+				target = <&CAM_NODE>;
+				_overlay_ {
+					status = "okay";
+					ports {
+						status = "okay";
+					};
+				};
+			};
+			override@1 {
+				target = <&VI_PORT_NODE>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@2 {
+				target = <&VI_IN_NODE>;
+				_overlay_ {
+					status = "okay";
+					vc-id = <PORT_VCID>;
+					remote-endpoint = <&CSI_OUT_NODE>;
+				};
+			};
+			override@3 {
+				target = <&CHAN_NODE>;
+				_overlay_ {
+					status = "okay";
+					ports {
+						port@0 {
+							status = "okay";
+						};
+						port@1 {
+							status = "okay";
+						};
+					};
+				};
+			};
+			override@4 {
+				target = <&CSI_IN_NODE>;
+				_overlay_ {
+					status = "okay";
+					remote-endpoint = <&SEN_OUT_NODE>;
+				};
+			};
+			override@5 {
+				target = <&CSI_OUT_NODE>;
+				_overlay_ {
+					status = "okay";
+					remote-endpoint = <&VI_IN_NODE>;
+				};
+			};
+			override@6 {
+				target = <&SER_NODE>;
+				_overlay_ {
+					status = "okay";
+					SER_NODE_OVERLAY
+				};
+			};
+			override@7 {
+				target = <&CAM_MODULE_NODE>;
+				_overlay_ {
+					status = "okay";
+					badge = STR(CONCAT_4(d3_,POSITION,_,CAM_MODEL));
+					drivernode0 {
+						status = "okay";
+						devname = STR(JOIN_2(DRIVER_NAME,CONCAT_3(IMG_BUS,-00,IMG_ADDR)));
+						proc-device-tree = STR(SEN_PATH);
+					};
+				};
+			};
+			override@8 {
+				target = <&SEN_OUT_NODE>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@9 {
+				target = <&DES_NODE>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+		};
+	};
+};

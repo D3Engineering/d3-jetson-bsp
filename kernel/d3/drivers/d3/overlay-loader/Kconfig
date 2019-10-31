@@ -1,0 +1,4 @@
+config D3_OVERLAY_LOADER
+	bool "Overlay Loader"
+	help
+	  D3 A driver that will apply device tree based on kernel parameters.

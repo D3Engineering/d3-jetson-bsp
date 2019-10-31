@@ -1,0 +1,25 @@
+/*
+ * Copyright (c) 2018-2019, D3 Engineering.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+
+#include "d3-xavier-2xocto.dts"
+#include "d3-jetson-bsp-version.dtsi"
+
+/ {
+	nvidia,dtsfilename = __FILE__;
+	nvidia,dtbbuildtime = __DATE__, __TIME__;
+	d3,jetson-bsp-version = D3_JETSON_BSP_VERSION;
+	d3,jetson-bsp-build-id = D3_JETSON_BSP_BUILDID;
+	overlay-loader {
+		active_overlays = "ov10640_0,ov10640_1,ov10640_2,ov10640_3,ov10640_4,ov10640_5,ov10640_6,ov10640_7,ov10640_8,ov10640_9,ov10640_10,ov10640_11,ov10640_12,ov10640_13,ov10640_14,ov10640_15";
+	};
+};

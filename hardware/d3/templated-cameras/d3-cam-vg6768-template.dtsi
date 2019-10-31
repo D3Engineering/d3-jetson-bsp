@@ -1,0 +1,106 @@
+/*
+ * Copyright (c) 2019, D3 Engineering. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+
+#include "d3-reset-cam.dtsi"
+#include "d3-check-cam.dtsi"
+
+
+#define CAM_MODEL vg6768
+
+#define CAM_NODE CONCAT_3(CAM_MODEL,_,PORT_IDX)
+#define CAM_NODE_NAME CONCAT_3(CAM_MODEL,@,IMG_ADDR)
+#define SEN_OUT_NODE CONCAT_2(sen_out_, CAM_NODE)
+
+#define SEN_PATH CONCAT_3(SER_PATH,/,CAM_NODE_NAME)
+#define SER_NODE_OVERLAY	\
+gpio-rmten = <0x0>; \
+gpio-out-src = <0x3>; \
+hs-clk-div = <0x1>; \
+div-m-val = <0x3>; \
+div-n-val = <0x7d>; \
+gpio-out-en = <0xf>; \
+gpio-in-en = <0x0>;
+
+
+&SER_NODE {
+	CAM_NODE: vg6768@IMG_ADDR {
+		status = STR(STATUS);
+		compatible = "d3,vg6768";
+		reg = <HEX_PREFIX(IMG_ADDR)>;
+
+		devnode = STR(CONCAT_2(video,PORT_IDX));
+
+		mclk = "extperiph1";
+		physical_w = "27.30";
+		physical_h = "21.80";
+		sensor_model = "vg6768";
+		use_decibel_gain = "true";
+
+		physical-addr = <0x11>;
+
+		mode0 {
+			mclk_khz = "24000";
+			num_lanes = STR(CSI_LANES);
+			tegra_sinterface = STR(TEGRA_SINTERFACE);
+			discontinuous_clk = "no";
+			dpcm_enable = "false";
+			cil_settletime = "0";
+			dynamic_pixel_bit_depth = "12";
+			csi_pixel_bit_depth = "12";
+			mode_type = "bayer";
+			pixel_phase = "rggb";
+			/* This is here to avoid seeing the warning from
+			 * Nvidia's code. TODO patch the kernel to remove
+			 * the warning. */
+			pixel_t = "rgb3";
+
+			active_w = "1920";
+			active_h = "1080";
+			readout_orientation = "0";
+			line_length = "3840";
+			inherent_gain = "1";
+			serdes_pix_clk_hz = "535000000";
+			pix_clk_hz = "148500000";
+
+			min_gain_val = "0"; /* dB */
+			max_gain_val = "30"; /* dB */
+			min_hdr_ratio = "1";
+			max_hdr_ratio = "1";
+			min_framerate = "30";
+			max_framerate = "30";
+			min_exp_time = "118";
+			max_exp_time = "660000";
+			embedded_metadata_height = "0";
+			vc_id = STR(PORT_VCID);
+		};
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			status = STR(STATUS);
+			port@0 {
+				reg = <0>;
+				SEN_OUT_NODE: endpoint {
+					status = STR(STATUS);
+					port-index = <CSI_PORT>;
+					bus-width = <CSI_LANES>;
+					remote-endpoint = <&CSI_IN_NODE>;
+					vc-id = <PORT_VCID>;
+				};
+			};
+		};
+	};
+};
+
+#include "d3-overlays-cam.dtsi"

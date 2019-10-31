@@ -1,0 +1,12 @@
+#!/bin/bash
+
+USER=nvidia
+TARGET=192.168.55.1
+CRED=$USER@$TARGET
+
+ssh-copy-id $CRED
+ssh -t $CRED 'sudo apt-get -y update && sudo apt-get install -y rsync'
+make sync-debug
+ssh -t $CRED 'cd debug; sudo ./prep-new-debug-system'
+ssh -t $CRED 'debug/disable-screen-lock'
+ssh -t $CRED 'cd debug; ./build-tm-api'

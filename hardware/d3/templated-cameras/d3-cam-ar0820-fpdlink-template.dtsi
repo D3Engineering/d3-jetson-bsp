@@ -1,0 +1,115 @@
+/*
+ * Copyright (c) 2019, D3 Engineering. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+
+#include "d3-reset-cam.dtsi"
+#include "d3-check-cam.dtsi"
+
+
+#define CAM_MODEL ar0820fpdlink
+#define DRIVER_NAME ar0820
+
+#define CAM_NODE CONCAT_3(CAM_MODEL,_,PORT_IDX)
+#define CAM_NODE_NAME CONCAT_3(CAM_MODEL,@,IMG_ADDR)
+#define SEN_OUT_NODE CONCAT_2(sen_out_,CAM_NODE)
+
+#define SEN_PATH CONCAT_3(SER_PATH,/,CAM_NODE_NAME)
+#define SER_NODE_OVERLAY 		\
+	gpio-rmten = <0x0>;			\
+	gpio-out-src = <0x1>;		\
+	gpio-out-en = <0x1>;		\
+	gpio-in-en = <0x0>;			\
+	hs-clk-div = <2>;			\
+	div-m-val = <1>;			\
+	div-n-val = <40>;			\
+	fsync-gpio = <0>;           \
+	i2c-voltage-sel = <0x1>;
+
+&SER_NODE {
+		CAM_NODE: CAM_NODE_NAME {
+			status = STR(STATUS);
+			compatible = "d3,ar0820";
+			reg = <HEX_PREFIX(IMG_ADDR)>;
+			devnode = STR(CONCAT_2(video,PORT_IDX));
+			physical-addr = <0x10>;
+
+			physical_w = "27.30";
+			physical_h = "21.80";
+			sensor_model = "ar0820";
+			use_decibel_gain = "false";
+			mclk = "extperiph1";
+
+			mode0 {
+				mclk_khz = "25000"; /* CSI driving clock */
+				num_lanes = STR(CSI_LANES);
+				tegra_sinterface = STR(TEGRA_SINTERFACE);
+				discontinuous_clk = "no"; /* should I set this to yes? */
+				dpcm_enable = "false";
+				cil_settletime = "0";
+				csi_pixel_bit_depth = "12";
+				mode_type = "bayer";
+				pixel_phase = "grbg";
+				active_w = "3848";
+				active_h = "2168";
+				readout_orientation = "0";
+				line_length = "3968";
+				inherent_gain = "1";
+				mclk_multiplier = "9";
+				pix_clk_hz = "200000000";
+				serdes_pix_clk_hz = "4000000000";
+				vc_id = STR(PORT_VCID);
+
+				/* 1-30 dB in .3 dB steps */
+				min_gain_val = "1.0";
+				max_gain_val = "15.0";
+				min_framerate = "20";
+				max_framerate = "20";
+
+				/* Units are microseconds */
+				min_exp_time = "30";
+				max_exp_time = "33333";
+				embedded_metadata_height = "0";
+
+				min_hdr_ratio = "1";
+				max_hdr_ratio = "1";
+				dynamic_pixel_bit_depth = "12";
+			};
+			ports {
+				status = STR(STATUS);
+				#address-cells = <1>;
+				#size-cells = <0>;
+				port@0 {
+					reg = <0>;
+					SEN_OUT_NODE: endpoint {
+						status = STR(STATUS);
+						port-index = <CSI_PORT>;
+						bus-width = <CSI_LANES>;
+						remote-endpoint = <&CSI_IN_NODE>;
+						vc-id = <PORT_VCID>;
+					};
+				};
+			};
+
+		};
+
+		/* CAT24C64; ON Semi. 64K EEPROM, 8192 8-bit words. */
+		eeprom@EEPROM_ADDR {
+			status = STR(STATUS);
+			compatible = "24c64";
+			reg = <HEX_PREFIX(EEPROM_ADDR)>;
+			pagesize = <32>;
+			physical-addr = <0x54>;
+		};
+};
+
+
+#include "d3-overlays-cam.dtsi"

@@ -1,0 +1,550 @@
+/*
+ * D3 Engineering NVIDIA RSP
+ *
+ * Copyright (c) 2018-2019, D3 Engineering. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+
+#include "tegra186-quill-p3310-1000-c03-00-base.dts"
+#include <dt-bindings/media/camera.h>
+#include "dt-bindings/clock/tegra186-clock.h"
+#include "t18x-common-platforms/tegra186-hdmi.dtsi"
+#include "tegra186-soc/tegra186-camera.dtsi"
+
+/ {
+	rtcpu@b000000 {
+		status = "okay";
+	};
+
+	/* Add fan tach_gpio to pwm_fan_shared_data */
+	pfsd {
+		tach_gpio = <&tegra_main_gpio TEGRA_MAIN_GPIO(X, 4) IRQ_TYPE_EDGE_BOTH>;
+	};
+
+	/* Give pwm_fan.c a regulator to look at in leiu of vdd_fan */
+	pwm-fan {
+		vdd-fan-supply = <&battery_reg>;
+	};
+
+	/* Pin A9 (GPIO3_PBB.00) is connected to the SYNC_EXT signal, which is
+	 * an optional input to the TX2. By default, this pin is an output and
+	 * was pulling this signal low. Setting it to an input so that it can
+	 * be driven properly
+	 *
+	 * Pin B19 (GPIO3_PI.05) is connected to FAN_DISABLE. This pin is set
+	 * HIGH by default, thus preventing us from controlling the fan. This
+	 * pin is not used by the pwm_fan.c driver so we take over and set it
+	 * as a low output.
+	 */
+	gpio@2200000 {
+		sync_ext {
+			gpio-hog; //Take over a pin
+			status = "okay";
+			input; //This can be 'input', 'output-low' or 'output-high'
+			gpios = <TEGRA_MAIN_GPIO(BB, 0) 0>;
+			label = "sync_ext";
+		};
+		gpio11_ap_wake_bt {
+			gpio-hog;
+			status = "okay";
+			output-low;
+			gpios = <TEGRA_MAIN_GPIO(I, 5) 0>;
+			label = "fan_disable";
+		};
+	};
+
+	/* I2C_GP0, DT alias: i2c1 (clock: E15, data: D15) */
+	i2c@c240000 {
+		/* EEPROM */
+		m24512@57 {
+			status = "okay";
+			compatible = "atmel,24c512"; /* TODO: verify compatibility */
+			reg = <0x57>;
+			pagesize = <128>;
+		};
+
+		/* clock */
+		cdcel937@6d {
+			status = "disabled";
+			compatible = "d3,?";
+			reg = <0x6d>;
+		};
+	};
+
+	/* I2C_GP1, DT alias: i2c0 (clock: A21, data: A20) */
+	i2c@3160000 {
+		/* U71, (pg. 35) */
+		/* there's a 9539 on the 2597 board at the same address. delete it */
+		/delete-node/ ina3221x@42;
+		/delete-node/ ina3221x@43;
+		/delete-node/ gpio@74;
+		/* /delete-node/ gpio@77; */
+		gpio_i2c_0_74: gpio@74 {
+			status = "okay";
+			compatible = "ti,tca9539";
+			reg = <0x74>;
+			#gpio-cells = <2>;
+			gpio-controller;
+			vcc-supply = <&vdd_3v3>;
+			interrupts = <TEGRA_MAIN_GPIO(N, 2) GPIO_ACTIVE_LOW>;
+		};
+
+		tmp112@48 {
+			status = "okay";
+			compatible = "tmp112";
+			reg = <0x48>;
+		};
+
+		tmp112@49 {
+			status = "okay";
+			compatible = "tmp112";
+			reg = <0x49>;
+		};
+
+		tmp112@4b {
+			status = "okay";
+			compatible = "tmp112";
+			reg = <0x4b>;
+		};
+
+		ads1115@4a {
+			status = "disabled";
+			compatible = "d3,?";
+			reg = <0x4a>;
+		};
+	};
+
+	/* I2C_GP2, alias i2c7 (clock: C11, data: C10) */
+	/* Display/Expansion connector */
+	/* The base address was verified on another project */
+	i2c@31c0000 {
+	};
+
+	/* I2C_GP3, DT alias: i2c8 (clock: C12, data: C13) */
+	i2c@31e0000 {
+		gpio_i2c_8_74: tca9539@74 {
+			status = "okay";
+			compatible = "ti,tca9539";
+			reg = <0x74>;
+			#gpio-cells = <2>;
+			gpio-controller;
+			vcc-supply = <&vdd_1v8_ap>;
+			/* #interrupt-cells = <2>; */
+			/* interrupt-controller; */
+			/* interrupt-parent = <&tegra_main_gpio>; */
+			/* interrupts = <TEGRA_MAIN_GPIO(B, 4) IRQ_TYPE_EDGE_BOTH>; */
+		};
+
+		gpio_i2c_8_75: tca9539@75 {
+			status = "okay";
+			compatible = "ti,tca9539";
+			reg = <0x75>;
+			#gpio-cells = <2>;
+			gpio-controller;
+			vcc-supply = <&vdd_1v8_ap>;
+			/* #interrupt-cells = <2>; */
+			/* interrupt-controller; */
+			/* interrupt-parent = <&tegra_main_gpio>; */
+			/* interrupts = <TEGRA_MAIN_GPIO(B, 4) IRQ_TYPE_EDGE_BOTH>; */
+		};
+
+		gpio_i2c_8_76: tca9539@76 {
+			status = "okay";
+			compatible = "ti,tca9539";
+			reg = <0x76>;
+			#gpio-cells = <2>;
+			gpio-controller;
+			vcc-supply = <&vdd_1v8_ap>;
+			/* #interrupt-cells = <2>; */
+			/* interrupt-controller; */
+			/* interrupt-parent = <&tegra_main_gpio>; */
+			/* interrupts = <TEGRA_MAIN_GPIO(B, 4) IRQ_TYPE_EDGE_BOTH>; */
+		};
+
+	};
+
+	pinmux@2430000 {
+		common {
+			/* XO2_PROGRAMN - A29 - SDIO_RST# - GPIO_WAN3 */
+			gpio_wan3_pb6 {
+				status = "okay";
+				nvidia,pins = "gpio_wan3_pb6";
+				nvidia,function = "rsvd0";
+				nvidia,pull = <TEGRA_PIN_PULL_UP>;
+				nvidia,tristate = <TEGRA_PIN_DISABLE>;
+				nvidia,enable-input = <TEGRA_PIN_DISABLE>;
+				nvidia,lpdr = <TEGRA_PIN_DISABLE>;
+			};
+
+			/* XO2_INITN - A23 - GPIO_EXP0_INT - GPIO_MDM1 */
+			gpio_mdm1_py0 {
+				status = "okay";
+				nvidia,pins = "gpio_mdm1_py0";
+				nvidia,function = "rsvd0";
+				nvidia,pull = <TEGRA_PIN_PULL_UP>;
+				nvidia,tristate = <TEGRA_PIN_DISABLE>;
+				nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+				nvidia,lpdr = <TEGRA_PIN_DISABLE>;
+			};
+
+			/* XO2_DONE - A22 - GPIO_EXP1_INT - GPIO_MDM7 */
+			gpio_mdm7_py6 {
+				status = "okay";
+				nvidia,pins = "gpio_mdm7_py6";
+				nvidia,function = "rsvd0";
+				nvidia,pull = <TEGRA_PIN_PULL_UP>;
+				nvidia,tristate = <TEGRA_PIN_DISABLE>;
+				nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+				nvidia,lpdr = <TEGRA_PIN_DISABLE>;
+			};
+
+			/* SOM_FPGA_GPIO0 - H8 - GPIO2_CAM0_RST# - QSPI_CS_N */
+			/* Used for FPGA reset. */
+			qspi_cs_n_pr5 {
+				status = "okay";
+				nvidia,pins = "qspi_cs_n_pr5";
+				nvidia,function = "rsvd1";
+				nvidia,pull = <TEGRA_PIN_PULL_NONE>;
+				nvidia,tristate = <TEGRA_PIN_DISABLE>;
+				nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+			};
+		};
+	};
+
+	gpio@2200000 {
+		machxo2-programn {
+			status = "okay";
+			gpio-hog;
+			input;
+			gpios = <TEGRA_MAIN_GPIO(B, 6) 0>; /* linux gpio334 */
+			label = "xo2_programn";
+		};
+
+		machxo2-reset {
+			status = "okay";
+			gpio-hog;
+			output-low;
+			gpios = <TEGRA_MAIN_GPIO(R, 5) 0>; /* linux gpio461 */
+			label = "xo2_reset";
+		};
+	};
+
+	/* Pinmux for SPI0 */
+	pinmux@2430000 {
+		common {
+			gpio_sen1_pv1 {
+				nvidia,pins = "gpio_sen1_pv1";
+				nvidia,function = "spi2";
+				nvidia,pull = <TEGRA_PIN_PULL_NONE>;
+				nvidia,tristate = <TEGRA_PIN_DISABLE>;
+				nvidia,enable-input = <TEGRA_PIN_DISABLE>;
+				nvidia,lpdr = <TEGRA_PIN_DISABLE>;
+			};
+
+			gpio_sen2_pv2 {
+				nvidia,pins = "gpio_sen2_pv2";
+				nvidia,function = "spi2";
+				nvidia,pull = <TEGRA_PIN_PULL_DOWN>;
+				nvidia,tristate = <TEGRA_PIN_ENABLE>;
+				nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+				nvidia,lpdr = <TEGRA_PIN_DISABLE>;
+			};
+
+			gpio_sen3_pv3 {
+				nvidia,pins = "gpio_sen3_pv3";
+				nvidia,function = "spi2";
+				nvidia,pull = <TEGRA_PIN_PULL_NONE>;
+				nvidia,tristate = <TEGRA_PIN_DISABLE>;
+				nvidia,enable-input = <TEGRA_PIN_DISABLE>;
+				nvidia,lpdr = <TEGRA_PIN_DISABLE>;
+			};
+
+			gpio_sen4_pv4 {
+				nvidia,pins = "gpio_sen4_pv4";
+				nvidia,function = "spi2";
+				nvidia,pull = <TEGRA_PIN_PULL_UP>;
+				nvidia,tristate = <TEGRA_PIN_DISABLE>;
+				nvidia,enable-input = <TEGRA_PIN_DISABLE>;
+				nvidia,lpdr = <TEGRA_PIN_DISABLE>;
+			};
+		};
+	};
+
+	/* SPI0, alias spi1 (E3, E4, F3, F4) Lattice X02. */
+	spi@c260000 {
+		status = "okay";
+		/delete-node/ spi-touch-sharp19x12@0;
+
+		machxo2: machxo2_mgr@0 {
+			status = "okay";
+			compatible = "lattice,machxo2-slave-spi";
+			reg = <0>;
+			spi-max-frequency = <8000000>;
+		};
+	};
+
+	machxo2_region {
+		status = "okay";
+		compatible = "fpga-region";
+		fpga-mgr = <&machxo2>;
+		#address-cells = <0x1>;
+		#size-cells = <0x1>;
+
+		firmware-name = "machxo2.bin";
+	};
+
+	pinmux@2430000 {
+		common {
+			/* SOM_FPGA_GPIO1 - H13 - GPIO8_ALS_PROX_INT - GPIO_PQ4 */
+			gpio_pq4_pi4 {
+				status = "okay";
+				nvidia,pins = "gpio_pq4_pi4";
+				nvidia,function = "rsvd0";
+				nvidia,pull = <TEGRA_PIN_PULL_UP>;
+				nvidia,tristate = <TEGRA_PIN_DISABLE>;
+				nvidia,enable-input = <TEGRA_PIN_DISABLE>;
+			};
+		};
+	};
+
+	gpio@2200000 {
+		machxo2-gpios {
+			status = "okay";
+			gpio-hog;
+			output-high;
+			gpios = <TEGRA_MAIN_GPIO(I, 4) 0>; /* linux gpio388 */
+			label = "som_fpga_gpio1";
+		};
+	};
+
+	pinmux@2430000 {
+		common {
+			/* SOM_FPGA_GPIO2 - H14 - SPI2_CLK - GPIO_WAN5 */
+			gpio_wan5_ph0 {
+				status = "okay";
+				nvidia,pins = "gpio_wan5_ph0";
+				nvidia,function = "spi1";
+				nvidia,pull = <TEGRA_PIN_PULL_NONE>;
+				nvidia,tristate = <TEGRA_PIN_DISABLE>;
+				nvidia,enable-input = <TEGRA_PIN_DISABLE>;
+				nvidia,lpdr = <TEGRA_PIN_DISABLE>;
+			};
+
+			/* SOM_FPGA_GPIO3 - H15 - SPI2_MISO - GPIO_WAN6 */
+			gpio_wan6_ph1 {
+				status = "okay";
+				nvidia,pins = "gpio_wan6_ph1";
+				nvidia,function = "spi1";
+				nvidia,pull = <TEGRA_PIN_PULL_DOWN>;
+				nvidia,tristate = <TEGRA_PIN_ENABLE>;
+				nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+				nvidia,lpdr = <TEGRA_PIN_DISABLE>;
+			};
+
+			/* SOM_FPGA_GPIO4 - G15 - SPI2_MOSI - GPIO_WAN7 */
+			gpio_wan7_ph2 {
+				status = "okay";
+				nvidia,pins = "gpio_wan7_ph2";
+				nvidia,function = "spi1";
+				nvidia,pull = <TEGRA_PIN_PULL_NONE>;
+				nvidia,tristate = <TEGRA_PIN_DISABLE>;
+				nvidia,enable-input = <TEGRA_PIN_DISABLE>;
+				nvidia,lpdr = <TEGRA_PIN_DISABLE>;
+			};
+
+			/* SOM_FPGA_GPIO5 - G16 - SPI2_CS0# - GPIO_WAN8 */
+			gpio_wan8_ph3 {
+				status = "okay";
+				nvidia,pins = "gpio_wan8_ph3";
+				nvidia,function = "spi1";
+				nvidia,pull = <TEGRA_PIN_PULL_UP>;
+				nvidia,tristate = <TEGRA_PIN_DISABLE>;
+				nvidia,enable-input = <TEGRA_PIN_DISABLE>;
+				nvidia,lpdr = <TEGRA_PIN_DISABLE>;
+			};
+		};
+	};
+
+	/* SPI2, alias spi0 (G15, G16, H14, H15) */
+	spi@3210000 {
+		status = "okay";
+
+		spidev@0 {
+			status = "okay";
+			compatible = "spidev";
+			reg = <0>;
+			spi-max-frequency = <8000000>;
+		};
+	};
+
+	/* SPI1, alias spi3 (E14, F13, F14, G13) */
+	spi@3240000 { /* TODO: verify the base address */
+
+	};
+
+	host1x {
+		nvcsi@150c0000 {
+			num-channels = <6>;
+			num-ports = <12>;
+		};
+		vi@15700000 {
+			num-channels = <6>;
+		};
+		nvdisplay@15200000 {
+			status = "disabled";
+			/delete-property/ avdd_lcd-supply;
+		};
+		/* HDMI0 */
+		nvdisplay@15220000 {
+			status = "okay";
+			/delete-property/ vdd_hdmi_5v0-supply;
+			vdd_hdmi_5v0-supply = <&battery_reg>;
+			avdd_hdmi-supply = <&spmic_ldo7>;
+			avdd_hdmi_pll-supply = <&spmic_sd2>;
+			win-mask = <0x7>;
+		};
+		sor {
+			status = "okay";
+			/delete-property/ nvidia,hpd-gpio;
+			nvidia,hpd-gpio = <&tegra_main_gpio TEGRA_MAIN_GPIO(P, 0) GPIO_ACTIVE_HIGH>;
+			hdmi-display {
+				disp-default-out {
+					nvidia,out-flags = <TEGRA_DC_OUT_HOTPLUG_HIGH>;
+				};
+			};
+		};
+		dpaux@155c0000 {
+			status = "okay";
+		};
+		/* HDMI1 */
+		nvdisplay@15210000 {
+			status = "okay";
+			/delete-property/ vdd_hdmi_5v0-supply;
+			vdd_hdmi_5v0-supply = <&battery_reg>;
+		};
+		sor1 {
+			status = "okay";
+			/delete-property/ nvidia,hpd-gpio;
+			nvidia,hpd-gpio = <&tegra_main_gpio TEGRA_MAIN_GPIO(P, 1) GPIO_ACTIVE_HIGH>;
+			hdmi-display {
+				disp-default-out {
+					nvidia,out-flags = <TEGRA_DC_OUT_HOTPLUG_HIGH>;
+				};
+			};
+		};
+		dpaux@15040000 {
+			status = "okay";
+		};
+	};
+
+	fixed-regulators {
+		/* regulator@17 was controlled by the same gpio pin */
+		/delete-node/ regulator@17;
+		/* FPD/GMSL power bank 0 */
+		vdd_bank_0: regulator@300 {
+			status = "okay";
+			reg = <0x12c>;
+			regulator-name = "vdd_bank_0";
+			compatible = "regulator-fixed";
+			regulator-always-on;
+			enable-active-high;
+			gpio = <&gpio_i2c_0_74 0 GPIO_ACTIVE_HIGH>;
+		};
+
+		/* regulator@8 was controlled by the same pin */
+		/delete-node/ regulator@8;
+		/* FPD/GMSL power bank 1 */
+		vdd_bank_1: regulator@301 {
+			status = "okay";
+			reg = <0x12d>;
+			regulator-name = "vdd_bank_1";
+			compatible = "regulator-fixed";
+			regulator-always-on;
+			enable-active-high;
+			gpio = <&gpio_i2c_0_74 3 GPIO_ACTIVE_HIGH>;
+		};
+		vdd_bank_io: regulator@302 {
+			status = "disabled";
+			reg = <302>;
+			regulator-name = "vdd_bank_io";
+			compatible = "regulator-fixed";
+			enable-active-high;
+			gpio = <&gpio_i2c_0_74 6 GPIO_ACTIVE_HIGH>;
+		};
+	};
+
+	pinctrl@3520000 {
+		/delete-property/ vbus-2-supply;
+		vbus-2-supply = <&battery_reg>;
+	};
+
+	mttcan@c310000 {
+		/delete-property/ gpio_can_stb;
+		/delete-property/ gpio_can_en;
+		/* Nvidia suggests that we don't use the pin D16 as GPIO
+		 * https://devtalk.nvidia.com/default/topic/1022844/d16-ao_dmic_in_dat-pin-in-tx2-as-gpio/?offset=3
+		 */
+		gpio_can_stb = <&tegra_aon_gpio TEGRA_AON_GPIO(AA, 4) GPIO_ACTIVE_LOW>;
+	};
+
+	mttcan@c320000 {
+		/delete-property/ gpio_can_stb;
+		/delete-property/ gpio_can_en;
+		gpio_can_stb = <&tegra_aon_gpio TEGRA_AON_GPIO(AA, 6) GPIO_ACTIVE_LOW>;
+	};
+
+	sdhci@3400000 {
+		/delete-property/ wp-gpios;
+		/delete-property/ wp-inverted;
+	};
+
+	/* This is used by nvcamera-daemon (and probably the argus
+	 * daemon). This is not needed if you only need v4l2. */
+	tegra-camera-platform {
+		compatible = "nvidia, tegra-camera-platform";
+
+		/**
+		 * Physical settings to calculate max ISO BW
+		 *
+		 * num_csi_lanes = <>;
+		 * Total number of CSI lanes when all cameras are active
+		 *
+		 * max_lane_speed = <>;
+		 * Max lane speed in Kbit/s
+		 *
+		 * min_bits_per_pixel = <>;
+		 * Min bits per pixel
+		 *
+		 * vi_peak_byte_per_pixel = <>;
+		 * Max byte per pixel for the VI ISO case
+		 *
+		 * vi_bw_margin_pct = <>;
+		 * Vi bandwidth margin in percentage
+		 *
+		 * max_pixel_rate = <>;
+		 * Max pixel rate in Kpixel/s for the ISP ISO case
+		 *
+		 * isp_peak_byte_per_pixel = <>;
+		 * Max byte per pixel for the ISP ISO case
+		 *
+		 * isp_bw_margin_pct = <>;
+		 * Isp bandwidth margin in percentage
+		 */
+		num_csi_lanes = <12>;
+		min_bits_per_pixel = <12>;
+		max_pixel_rate = <222750>;
+		vi_peak_byte_per_pixel = <2>;
+		vi_bw_margin_pct = <25>;
+		isp_peak_byte_per_pixel = <5>;
+		isp_bw_margin_pct = <25>;
+		max_lane_speed = <1500000>;
+	};
+};

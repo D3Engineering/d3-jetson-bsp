@@ -1,0 +1,4 @@
+config D3_UB953
+	tristate "UB953 FPDLINK-III Serializer Driver"
+	help
+	  TI ub953 serializer (used in D3 serdes board, et. al). 

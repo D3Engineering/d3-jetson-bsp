@@ -1,0 +1,5 @@
+config D3_AR0820
+	tristate "Enable OnSemi AR0820 CMOS Image Sensor."
+	help
+	  OnSemi AR0820 CMOS Image Sensor.
+

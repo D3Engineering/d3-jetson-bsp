@@ -1,0 +1,74 @@
+/*
+ * Copyright (c) 2018-2019, D3 Engineering. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+
+#include "d3-reset-cam.dtsi"
+#include "d3-check-cam.dtsi"
+
+
+#define CAM_MODEL imx390rcm
+#define DRIVER_NAME imx390
+
+#define CAM_NODE CONCAT_3(CAM_MODEL,_,PORT_IDX)
+#define CAM_NODE_NAME CONCAT_3(CAM_MODEL,@,IMG_ADDR)
+#define SEN_OUT_NODE CONCAT_2(sen_out_,CAM_NODE)
+
+#define SEN_PATH CONCAT_3(SER_PATH,/,CAM_NODE_NAME)
+#define SER_NODE_OVERLAY	\
+gpio-rmten = <0x0>; \
+gpio-out-src = <0x3>; \
+gpio-out-en = <0xF>; \
+gpio-in-en = <0x0>; \
+hs-clk-div = <0x2>; \
+div-m-val = <0x1>; \
+div-n-val = <0x25>;
+
+
+&SER_NODE {
+	CAM_NODE: CAM_NODE_NAME {
+		status = STR(STATUS);
+		compatible = "d3,imx390";
+		reg = <HEX_PREFIX(IMG_ADDR)>;
+
+		devnode = STR(CONCAT_2(video,PORT_IDX));
+
+		mclk = "extperiph1";
+		physical_w = "5.37";
+		physical_h = "4.04";
+		sensor_model = "imx390";
+		use_decibel_gain = "true";
+		use_sensor_mode_id = "true";
+		physical-addr = <0x1a>;
+		deserializer = <&DES_NODE>;
+
+#		include "d3-cam-imx390-modes.dtsi"
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			status = STR(STATUS);
+			port@0 {
+				reg = <0>;
+				SEN_OUT_NODE: endpoint {
+					status = STR(STATUS);
+					port-index = <CSI_PORT>;
+					bus-width = <CSI_LANES>;
+					remote-endpoint = <&CSI_IN_NODE>;
+					vc-id = <PORT_VCID>;
+				};
+			};
+		};
+	};
+};
+
+#include "d3-overlays-cam.dtsi"

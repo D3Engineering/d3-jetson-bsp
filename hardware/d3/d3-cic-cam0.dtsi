@@ -1,0 +1,49 @@
+/*
+ * Copyright (c) 2019, D3 Engineering. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+
+#include "d3-reset-full.dtsi"
+
+#define DES_NODE ds90ub960
+#ifdef D3_BOARD_XAVIER_CIC
+#	define DES_PATH /proc/device-tree/i2c@3180000/mux@70/i2c@0/ub960@32
+#endif
+#ifdef D3_BOARD_TX2_CIC
+#	define DES_PATH /proc/device-tree/i2c@3180000/mux@70/i2c@0/ub960@32
+#endif
+#define SER_ADDR 3c
+#define IMG_BUS 9
+#define IMG_ADDR 48
+#define CSI_PORT 0
+#define CSI_LANES 4
+#define IOVDD_SUPPLY <&vdd_1v8_ap>
+#define AVDD_SUPPLY <&vdd_1v8_ap>
+#define STATUS disabled
+#define TEGRA_SINTERFACE serial_a
+/* A is CSI_PORT * 2 */
+#define ENDPOINT_A 0
+/* B is A+1 */
+#define ENDPOINT_B 1
+#define POSITION rear
+#define ORIENTATION 1
+#define PORT_VCID 0
+#define DES_LINK 0
+
+/* Include possible serializers */
+#include "templated-serializers/d3-ser-ub953-template.dtsi"
+
+/* Include possible cams */
+#include "d3-tegra-nvcsi.dtsi"
+#include "templated-cameras/d3-cam-ov10640-template.dtsi"
+#include "templated-cameras/d3-cam-imx390-template.dtsi"
+#include "templated-cameras/d3-cam-imx390rcm-template.dtsi"
+#include "templated-cameras/d3-cam-vg6768-template.dtsi"

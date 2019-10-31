@@ -1,0 +1,39 @@
+/*
+ * Copyright (c) 2019, D3 Engineering. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+
+#include "d3-reset-ser.dtsi"
+#include "d3-check-ser-gmsl.dtsi"
+
+#define SER_MODEL max9295
+#define SER_NODE CONCAT_3(SER_MODEL,_,PORT_IDX)
+#define SER_NODE_NAME CONCAT_3(SER_MODEL,@,SER_ADDR)
+#define SER_PATH CONCAT_3(DES_PATH,/link@0/,SER_NODE_NAME)
+#define DES_LINK_NODE CONCAT_3(DES_NODE,_link, DES_LINK)
+
+&DES_LINK_NODE {
+	SER_NODE: SER_NODE_NAME {
+		compatible = "maxim,max9295";
+		status = STR(STATUS);
+		reg = <HEX_PREFIX(SER_ADDR)>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+		physical-addr = <0x62>;
+		gmsl-reset-bit-rates = GMSL_RESET_BIT_RATES;
+		link@0 {
+			reg = <0>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			bus-number = <IMG_BUS>;
+		};
+	};
+};

@@ -1,0 +1,38 @@
+/*
+ * Copyright (c) 2018-2019, D3 Engineering.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+
+/* This file is a no-op unless an earlier file has defined a label
+ * for the configuration EEPROM. */
+#ifdef D3_CONFIG_EEPROM
+
+/* Make sure this file isn't included twice with an EEPROM selected, since
+ * we don't want to silently override a config-EEPROM selection. */
+#ifdef D3_CONFIG_EEPROM_INCLUDE_GUARD
+#error "d3-config-eeprom.dtsi included more than once.  I am not sure which you want to use!"
+#endif /*D3_CONFIG_EEPROM_INCLUDE_GUARD*/
+
+#define D3_CONFIG_EEPROM_INCLUDE_GUARD
+
+/* Tell the overlay loader which EEPROM to read configuration settings from. */
+/ {
+	chosen {
+		d3,config-eeprom@0 {
+			/* Reference the nvmem in the manner required by
+			 * kernel/kernel-4.9/Documentation/devicetree/bindings/nvmem/nvmem.txt
+			 */
+			nvmem = <&D3_CONFIG_EEPROM>;
+			nvmem-names = "overlay";
+		};
+	};
+};
+#endif /* D3_CONFIG_EEPROM */

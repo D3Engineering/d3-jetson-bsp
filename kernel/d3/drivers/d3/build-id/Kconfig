@@ -1,0 +1,5 @@
+config D3_BUILDID
+	bool "Include a build identifier"
+	select NVMEM
+	help
+        This will include a unique identifier for each build in the kernel.

@@ -1,0 +1,4 @@
+config D3_VG6768
+	bool "ST Micro vg6768 Camera Driver"
+	help
+	  ST Micro vg6768 Camera Driver for Nvidia Tegra systems including Jetson Tx2.

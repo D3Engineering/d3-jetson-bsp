@@ -10,3 +10,9 @@ config.status
 configure
 install-sh
 missing
+bin/kernel-deb
+d3-jetson-util/debian/changelog
+d3-jetson-util/target-overlay/boot/extlinux/extlinux.conf
+doc/D3-Jetson-BSP-Release-Notes.md
+hardware/d3/d3-jetson-bsp-version.dtsi
+kernel/d3/include/d3/d3-jetson-bsp.h

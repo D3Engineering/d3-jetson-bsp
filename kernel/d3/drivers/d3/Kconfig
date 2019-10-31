@@ -1,0 +1,13 @@
+menu "D3 Drivers"
+  source "drivers/d3/build-id/Kconfig"
+  source "drivers/d3/early-at24/Kconfig"
+  source "drivers/d3/config-eeprom/Kconfig"
+  source "drivers/d3/overlay-loader/Kconfig"
+  source "drivers/d3/ub960/Kconfig"
+  source "drivers/d3/ub953/Kconfig"
+# source "drivers/d3/max9296/Kconfig"
+  source "drivers/d3/imx390/Kconfig"
+  source "drivers/d3/ar0820/Kconfig"
+  source "drivers/d3/vg6768/Kconfig"
+  source "drivers/d3/ov10640/Kconfig"
+endmenu

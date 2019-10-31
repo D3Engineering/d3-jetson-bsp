@@ -1,0 +1,128 @@
+/*
+ * Copyright (c) 2018-2019, D3 Engineering. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+
+#define X_CONCAT(a,b) a##b
+#define CONCAT(a,b) X_CONCAT(a,b)
+
+#define XX_STR_CONCAT(a) #a
+#define X_STR_CONCAT(a,b) XX_STR_CONCAT(a##b)
+#define STR_CONCAT(a,b) X_STR_CONCAT(a,b)
+
+#define HEX_PREFIX(a) CONCAT(0x, a)
+
+&GMSL_LINK {
+	serializer@SER_ADDR {
+		compatible = "d3,?";
+		status = "okay";
+		reg = <HEX_PREFIX(SER_ADDR)>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+	};
+	sensor@IMG_ADDR {
+		status = "okay";
+		compatible = "d3,somesensor";
+		reg = <HEX_PREFIX(IMG_ADDR)>;
+		devnode = "CONCAT(video,PORT_IDX)";
+
+		physical_w = "27.30";
+		physical_h = "21.80";
+		sensor_model = "sensor_?";
+		use_decibel_gain = "true";
+
+		mode0 {
+			mclk_khz = "27000";
+			num_lanes = "2";
+			tegra_sinterface = TEGRA_SINTERFACE;
+			discontinuous_clk = "no";
+			dpcm_enable = "false";
+			cil_settletime = "0";
+			csi_pixel_bit_depth = "12";
+			mode_type = "bayer";
+			pixel_phase = "rggb";
+			active_w = "1936";
+			active_h = "1100";
+			readout_orientation = "0";
+			line_length = "4400";
+			inherent_gain = "1";
+			mclk_multiplier = "5";
+			pix_clk_hz = "148500000";
+
+			/* 1-30 dB in .3 dB steps */
+			min_gain_val = "1.0";
+			max_gain_val = "30.0";
+			min_framerate = "30";
+			max_framerate = "30";
+
+			/* Units are microseconds */
+			min_exp_time = "30";
+			max_exp_time = "33333";
+			embedded_metadata_height = "1";
+		};
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			port@0 {
+				reg = <0>;
+				CONCAT(sen_out,PORT_IDX): endpoint {
+					status = "okay";
+					port-index = <CSI_PORT>;
+					bus-width = <2>;
+					remote-endpoint = <&CONCAT(csi_in,PORT_IDX)>;
+				};
+			};
+		};
+	};
+};
+
+&vi_base {
+	ports {
+		port@CSI_PORT {
+			status = "okay";
+			reg = <CSI_PORT>;
+			CONCAT(vi_in,PORT_IDX): endpoint {
+				status = "okay";
+				port-index = <CSI_PORT>;
+				bus-width = <2>;
+				remote-endpoint = <&CONCAT(csi_out,PORT_IDX)>;
+			};
+		};
+	};
+};
+
+&csi_base {
+	channel@CSI_PORT {
+		status = "okay";
+		reg = <CSI_PORT>;
+		ports {
+			port@0 {
+				status = "okay";
+				reg = <0>;
+				CONCAT(csi_in,PORT_IDX): endpoint@ENDPOINT_A {
+					status = "okay";
+					port-index = <CSI_PORT>;
+					bus-width = <2>;
+					remote-endpoint = <&CONCAT(sen_out,PORT_IDX)>;
+				};
+			};
+
+			port@1 {
+				status = "okay";
+				reg = <1>;
+				CONCAT(csi_out,PORT_IDX): endpoint@ENDPOINT_B {
+					remote-endpoint = <&CONCAT(vi_in,PORT_IDX)>;
+				};
+			};
+		};
+	};
+};
