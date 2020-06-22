@@ -181,7 +181,7 @@
 };
 
 &vi_base {
-    num-channels = <4>;
+    num-channels = <16>;
     vi_ports: ports {
         #address-cells = <1>;
         #size-cells = <0>;
@@ -190,6 +190,6 @@
 };
 
 &csi_base {
-    num-channels = <4>;
+    num-channels = <16>;
     /* channels will be included here */
 };

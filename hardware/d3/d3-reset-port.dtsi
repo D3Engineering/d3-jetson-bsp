@@ -14,6 +14,7 @@
 #undef PORT_VCID
 #undef DES_LINK
 #undef PORT_IDX
+#undef POSITION
 #undef ENDPOINT_A
 #undef ENDPOINT_B
 #undef SER_ADDR

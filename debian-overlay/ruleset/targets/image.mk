@@ -102,7 +102,7 @@ ifneq ($(filter kfreebsd, $(DEB_HOST_ARCH_OS)):$(strip $(shell grep -E '^[^\#]*C
 	$(MAKE) $(EXTRAV_ARG) INSTALL_MOD_PATH=$(INSTALL_MOD_PATH)	              \
 		INSTALL_FW_PATH=$(INSTALL_MOD_PATH)/lib/firmware/$(KERNELRELEASE)     \
 		$(CROSS_ARG) ARCH=$(KERNEL_ARCH) INSTALL_MOD_STRIP=1 modules_install
-	$(MAKE) $(D3_FLAGS) $(EXTRAV_ARG) INSTALL_MOD_PATH=$(INSTALL_MOD_PATH)	              \
+	$(MAKE) D3_DTCCPP_FLAGS="$(D3_DTCCPP_FLAGS)" $(D3_FLAGS) $(EXTRAV_ARG) INSTALL_MOD_PATH=$(INSTALL_MOD_PATH)	              \
 		INSTALL_FW_PATH=$(INSTALL_MOD_PATH)/lib/firmware/$(KERNELRELEASE)     \
 		$(CROSS_ARG) ARCH=$(KERNEL_ARCH) INSTALL_MOD_STRIP=1 dtbs || echo "no dtb target"
 	$(MAKE) $(EXTRAV_ARG) INSTALL_MOD_PATH=$(INSTALL_MOD_PATH)	              \
@@ -112,18 +112,45 @@ ifneq ($(filter kfreebsd, $(DEB_HOST_ARCH_OS)):$(strip $(shell grep -E '^[^\#]*C
 		dtbs_install || echo "no dtbs_install target"
 	cd $(TMPTOP)/usr/lib/linux-image-$(KERNELRELEASE); \
 	for f in *.dtb; do \
-		type=$$(dtc -I dtb -O dts $$f  | awk '/^[[:space:]]+model/ {print $$3}' | sed s/[\"\;]//g); \
+		echo "   SIGN $$f" ; \
+		type="$$(dtc -q -I dtb -O dts "$$f" | perl -ne '/^\s*model\s*=\s*"?([^;"]+)"?\s*;"{0,0}/ and print("$$1\n"),last')"; \
+		: Note - the 0,0 item in the regex above is to balance quotes for the syntax highlighter ; \
 		case "$$type" in \
-			"jetson-nano") \
-			;; \
-			"quill") \
+			"jetson-nano" | *"TX1"* | *"Nano"* | "jetson_e") \
+				id='0x21' \
+				echo "       Warning: Skipping Nano DTB $$f, not supported" ; \
+				continue ; \
+				;; \
+			"quill" | "lightning" | "storm" | "jetson_cv") \
 				id='0x18' \
-			;; \
-			"jetson-xavier" | "Jetson-AGX") \
+				;; \
+			"jetson-xavier" | *"AGX"*) \
 				id='0x19' \
-			;; \
+				;; \
+			jetson-nano|*TX1*|*Nano*) \
+				id='0x21' ; \
+				echo "       Warning: Skipping Nano DTB $$f, not supported" ; \
+				continue ; \
+				;; \
+			jetson_e) \
+				id='0x21' ; \
+				echo "       Warning: Skipping Nano DTB $$f, not supported" ; \
+				continue ; \
+				;; \
+			quill) \
+				id='0x18' \
+				;; \
+			lightning|storm|jetson_cv) \
+				id='0x18' \
+				;; \
+			jetson-xavier|*AGX*) \
+				id='0x19' \
+				;; \
+			*) \
+				die "Unknown DTS type $$type for DTB $$dtb_name" \
+				;; \
 		esac; \
-		$(L4TDIR)/bootloader/tegraflash.py --chip $$id --cmd "sign $$f" --skipuid > /dev/null; \
+		$(L4TDIR)/bootloader/tegraflash.py --chip "$$id" --cmd "sign $$f" --skipuid > /dev/null; \
 	done
 # Are modules to be signed? if do, do nothing, else add in a link to the debug module
       ifeq ($(strip $(shell grep -E '^[^\#]*CONFIG_MODULE_SIG[^_]' $(CONFIG_FILE))),)

@@ -1,0 +1,85 @@
+/*
+ * Copyright (c) 2019, D3 Engineering. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+
+#include "d3-reset-full.dtsi"
+
+#define DES_NODE ds90ub960
+#define DES_PATH /proc/device-tree/i2c@3180000/mux@70/i2c@0/ub960@32
+#define SER_ADDR 3c
+#define IMG_BUS 9
+#define IMG_ADDR 48
+#define CSI_PORT 0
+#define CSI_LANES 4
+#define IOVDD_SUPPLY <&vdd_1v8_ap>
+#define AVDD_SUPPLY <&vdd_1v8_ap>
+#define STATUS disabled
+#define TEGRA_SINTERFACE serial_a
+#define ORIENTATION 1
+
+/* Port 0 */
+#include "d3-reset-port.dtsi"
+
+#define PORT_VCID 0
+#define DES_LINK 0
+#define PORT_IDX 0
+#define POSITION PORT_IDX
+#define ENDPOINT_A 0
+#define ENDPOINT_B 1
+#define SER_ADDR 40
+#define IMG_ADDR 60
+
+#include "d3-cic-cameras.dtsi"
+
+/* Port 1 */
+#include "d3-reset-port.dtsi"
+
+#define PORT_VCID 1
+#define DES_LINK 1
+#define PORT_IDX 1
+#define POSITION PORT_IDX
+#define ENDPOINT_A 2
+#define ENDPOINT_B 3
+#define SER_ADDR 41
+#define IMG_ADDR 61
+
+#include "d3-cic-cameras.dtsi"
+
+
+/* Port 2 */
+#include "d3-reset-port.dtsi"
+
+#define PORT_VCID 2
+#define DES_LINK 2
+#define PORT_IDX 2
+#define POSITION PORT_IDX
+#define ENDPOINT_A 4
+#define ENDPOINT_B 5
+#define SER_ADDR 42
+#define IMG_ADDR 62
+
+#include "d3-cic-cameras.dtsi"
+
+
+/* Port 3 */
+#include "d3-reset-port.dtsi"
+
+#define PORT_VCID 3
+#define DES_LINK 3
+#define PORT_IDX 3
+#define POSITION PORT_IDX
+#define ENDPOINT_A 6
+#define ENDPOINT_B 7
+#define SER_ADDR 43
+#define IMG_ADDR 63
+
+#include "d3-cic-cameras.dtsi"

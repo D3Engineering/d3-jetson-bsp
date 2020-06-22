@@ -466,6 +466,7 @@ struct ub960 {
 	unsigned long lock_timeout;
 	unsigned long status_period;
 	unsigned long status_count;
+	unsigned int active_streams;
 
 	struct regulator *avdd_reg;
 	struct regulator *iovdd_reg;
@@ -491,16 +492,35 @@ int ub960_s_stream(struct i2c_client *self_in,
 {
 	int err = 0;
 	struct ub960 *self = i2c_get_clientdata(self_in);
+	struct mutex *lock = &self->indirect_access_lock;
 
-	/* nothing to do for enable */
+
+	/* increment active number of streams when starting a new stream */
 	if (enable) {
+		mutex_lock(lock);
+		++(self->active_streams);
+		mutex_unlock(lock);
+		dev_dbg(self->dev, "%s started a new stream; "
+				"%d active streams", src->dev.driver->name,
+				self->active_streams);
 		return 0;
 	}
-
-	dev_dbg(self->dev, "%s notified end-of-stream,"
-		" performing digital reset", src->dev.driver->name);
-	TRY(err, regmap_write(self->map, UB960_REG_RESET_CTL, 0x01));
-	usleep_range(3 * 1000, 4 * 1000);
+	/* decrement number of streams on disable */
+	else {
+		mutex_lock(lock);
+		--(self->active_streams);
+		mutex_unlock(lock);
+		dev_dbg(self->dev, "%s stopped a stream; "
+				"%d active streams", src->dev.driver->name,
+				self->active_streams);
+		/* only reset if there are no active streams running */
+		if (self->active_streams == 0) {
+			dev_dbg(self->dev, "%s notified end-of-stream,"
+				" performing digital reset", src->dev.driver->name);
+			TRY(err, regmap_write(self->map, UB960_REG_RESET_CTL, 0x01));
+			usleep_range(3 * 1000, 4 * 1000);
+		}
+	}
 	return err;
 }
 EXPORT_SYMBOL_GPL(ub960_s_stream);
@@ -1959,13 +1979,24 @@ static int ub960_check_status(struct ub960 *self)
 
 	for (id = 0; id < ARRAY_SIZE(self->ports); id++) {
 		port = &self->ports[id];
+		dev_dbg(self->dev, "port %i: configured = %i, enabled = %i",
+				port->index, port->configured, port->enabled);
 
 		if (!port->configured)
 			continue;
+		if (!port->enabled) {
+			dev_warn(self->dev, "WARNING: port %i is configured "
+			"but is not enabled, ensure this is expected", port->index);
+			continue;
+		}
 
 		/* Ignore errors, check all ports */
 		if (status & (1 << port->index))
 			ub960_handle_port_irq(self, port);
+		else
+			dev_warn(self->dev, "WARNING: port %i is configured "
+			"and enabled, but has no imager. "
+			"Please ensure this is expected", port->index);
 	}
 
 	return 0;
@@ -2065,35 +2096,32 @@ static int ub960_probe(struct i2c_client *client,
 	self->lock_timeout = 4 * HZ;
 	self->status_period = HZ;
 	self->status_count = 10;
+	self->active_streams = 0;
 
 	/* Load configuration from device tree */
 	TRY(err, ub960_configuration_load(self, node));
-	dev_dbg(dev, "err = %i after ub960_configuration_load", err);
+	dev_dbg(dev, "ub960_configuration_load ok");
 
 	/* Setup regulators */
-	dev_dbg(self->dev, "get regulators");
 	TRY(err, ub960_regulators_get(self));
-	dev_dbg(dev, "err = %i after ub960_regulators_get", err);
+	dev_dbg(dev, "ub960_regulators_get ok");
 
 	/* Setup gpio */
-	dev_dbg(self->dev, "gpio");
 	TRY(err, ub960_gpios_get(self));
-	dev_dbg(dev, "err = %i after ub960_gpios_get", err);
+	dev_dbg(dev, "ub960_gpios_get ok");
 
 	mutex_init(&self->indirect_access_lock);
 
-	dev_dbg(self->dev, "regmap init");
 	TRY_MEM(self->map, devm_regmap_init_i2c(client, &ub960_regmap_cfg));
 
-	dev_dbg(self->dev, "reset");
 	err = ub960_reset(self);
-	dev_dbg(dev, "err = %i after ub960_reset", err);
+	dev_dbg(dev, "ub960_reset ok");
 	if (err == -EREMOTEIO || err == -ETIMEDOUT)
 		return -EPROBE_DEFER;
 
 	/* Sanity check */
 	err = ub960_is_device_supported(self, &is_supported);
-	dev_dbg(dev, "err = %i after ub960_is_device_supported", err);
+	dev_dbg(dev, "ub960_is_device_supported ok");
 	if (err == -EREMOTEIO || err == -ETIMEDOUT)
 		return -EPROBE_DEFER;
 	if (!is_supported) {
@@ -2102,24 +2130,24 @@ static int ub960_probe(struct i2c_client *client,
 	}
 
 	err |= ub960_csi_configure(self);
-	dev_dbg(dev, "err = %i after ub960_csi_configure", err);
+	dev_dbg(dev, "ub960_csi_configure ok");
 	err |= ub960_fsync_configure(self, node);
-	dev_dbg(dev, "err = %i after ub960_fsync_configure", err);
+	dev_dbg(dev, "ub960_fsync_configure ok");
 
 	/* configure the ports that have been defined in the device tree */
 	err |= ub960_ports_configure(self);
-	dev_dbg(dev, "err = %i after ub960_ports_configure", err);
+	dev_dbg(dev, "ub960_ports_configure ok");
 
 
 	TRY(err, ub960_setup_irq(self));
-	dev_dbg(dev, "err = %i after ub960_setup_irq", err);
+	dev_dbg(dev, "ub960_setup_irq ok");
 	/* TODO: After this point the polled-irq must be recovered upon failure */
 
 	if (self->test_pattern.enabled) {
 		err |= ub960_test_pattern_enable(self);
-		dev_dbg(dev, "err = %i after ub960_test_pattern_enable",  err);
+		dev_dbg(dev, "ub960_test_pattern_enable ok");
 		err |= ub960_test_pattern_driver_start(self);
-		dev_dbg(dev, "err = %i after ub960_test_pattern_driver_start",  err);
+		dev_dbg(dev, "ub960_test_pattern_driver_start ok");
 	}
 
 	return 0;

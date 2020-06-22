@@ -15,7 +15,7 @@
 #define CSI_PORT 5
 #define STATUS disabled
 #define TEGRA_SINTERFACE serial_f
-#define POSITION topright
+#define POSITION CSI_PORT
 #define ORIENTATION 1
 #define IOVDD_SUPPLY <&vdd_1v8_ap>
 #define AVDD_SUPPLY <&vdd_1v8_ap>

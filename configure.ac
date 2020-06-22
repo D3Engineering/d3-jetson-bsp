@@ -67,17 +67,17 @@ AC_ARG_WITH(
           xavier)
             AM_CONDITIONAL(XAVIER, true)
             system_type=xavier
-            l4t_dir=`realpath ~/nvidia/nvidia_sdk/JetPack_4.2.2_Linux_GA_P2888/Linux_for_Tegra`
+            l4t_dir=`realpath ~/nvidia/nvidia_sdk/JetPack_4.3_Linux_P2888/Linux_for_Tegra`
           ;;
           tx2)
             AM_CONDITIONAL(TX2, true)
             system_type=tx2
-            l4t_dir=`realpath ~/nvidia/nvidia_sdk/JetPack_4.2.2_Linux_GA_P3310/Linux_for_Tegra`
+            l4t_dir=`realpath ~/nvidia/nvidia_sdk/JetPack_4.3_Linux_P3310/Linux_for_Tegra`
           ;;
           nano)
             AM_CONDITIONAL(NANO, true)
             system_type=nano
-            l4t_dir=`realpath ~/nvidia/nvidia_sdk/JetPack_4.2.2_Linux_GA_P3448/Linux_for_Tegra`
+            l4t_dir=`realpath ~/nvidia/nvidia_sdk/JetPack_4.3_Linux_P3448/Linux_for_Tegra`
           ;;
           *)
             AC_MSG_ERROR([bad value ${withval} for --with-system-type (valid:xavier, tx2, nano)])
@@ -85,7 +85,7 @@ AC_ARG_WITH(
     esac],
     [
         system_type=tx2
-        l4t_dir=`realpath ~/nvidia/nvidia_sdk/JetPack_4.2.2_Linux_GA_P3310/Linux_for_Tegra`
+        l4t_dir=`realpath ~/nvidia/nvidia_sdk/JetPack_4.3_Linux_P3310/Linux_for_Tegra`
     ])
 
 # Change the l4t directory from the one inferred by the system type if
@@ -94,15 +94,23 @@ if [[ -n "$l4t_override_dir" ]]; then
    l4t_dir="$l4t_override_dir"
 fi
 
+# Verify L4T directory exists, whether inferred or provided.
+if [[ -z "$l4t_dir" ]] ; then
+      AC_MSG_ERROR(L4T dir is not defined)
+elif [[ ! -d "$l4t_dir" ]] ; then
+      AC_MSG_ERROR(L4T directory $l4t_dir does not exist)
+fi
+
 AC_SUBST([CUSTOMER], customer)
 version_suffix=''
 version_prefix=''
 if [[ "$CUSTOMER" != "d3" ]]; then
-   version_suffix="-customer"
-   version_prefix="customer-"
+    version_suffix="-customer"
+    version_prefix="customer-"
 fi
 AC_SUBST([VERSION_SUFFIX], [$version_suffix])
 AC_SUBST([VERSION_PREFIX], [$version_prefix])
+AC_SUBST([VERSION_NAME], [$D3_JETSON_BSP_VERSION$VERSION_SUFFIX])
 
 kernel_dir=`realpath ./kernel/kernel-4.9`
 m4_define(linux_build_path, "$PWD/build/kernel")
@@ -132,12 +140,10 @@ AC_CONFIG_FILES([
     d3-jetson-util/target-overlay/boot/extlinux/extlinux.conf
     d3-jetson-util/Makefile
     doc/D3-Jetson-BSP-Release-Notes.md
-    bin/kernel-deb
 ])
+AC_CONFIG_FILES([bin/kernel-deb], [chmod +x bin/kernel-deb])
 AM_SILENT_RULES([yes])
 AC_OUTPUT
-
-chmod +x bin/kernel-deb
 
 echo
 echo

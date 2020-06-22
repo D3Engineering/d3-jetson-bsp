@@ -48,14 +48,15 @@
 				cil_settletime = "0";
 				csi_pixel_bit_depth = "12";
 				mode_type = "bayer";
-				pixel_phase = "grbg";
+				pixel_phase = "rggb";
 				active_w = "3848";
 				active_h = "2168";
 				readout_orientation = "0";
 				line_length = "3968";
 				inherent_gain = "1";
 				mclk_multiplier = "9";
-				pix_clk_hz = "200000000";
+				pix_clk_hz = "264000000";
+				serdes_pix_clk_hz = "600000000";
 				vc_id = STR(PORT_VCID);
 
 				/* 1-30 dB in .3 dB steps */

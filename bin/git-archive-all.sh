@@ -221,7 +221,7 @@ if [ $VERBOSE -eq 1 ]; then
     echo -n "creating superproject archive..."
 fi
 rm -f $TMPDIR/$(basename "$(pwd)").$FORMAT
-git archive --format=$FORMAT --prefix="$PREFIX" $ARCHIVE_OPTS $TREEISH > $TMPDIR/$(basename "$(pwd)").$FORMAT
+git archive --worktree-attributes --format=$FORMAT --prefix="$PREFIX" $ARCHIVE_OPTS $TREEISH > $TMPDIR/$(basename "$(pwd)").$FORMAT
 if [ $VERBOSE -eq 1 ]; then
     echo "done"
 fi
@@ -254,7 +254,7 @@ while read path; do
     TREEISH=$(grep "^ .*${path%/} " "$TMPLIST" | cut -d ' ' -f 2) # git submodule does not list trailing slashes in $path
     cd "$path"
     rm -f "$TMPDIR"/"$(echo "$path" | sed -e 's/\//./g')"$FORMAT
-    git archive --format=$FORMAT --prefix="${PREFIX}$path" $ARCHIVE_OPTS ${TREEISH:-HEAD} > "$TMPDIR"/"$(echo "$path" | sed -e 's/\//./g')"$FORMAT
+    git archive --worktree-attributes --format=$FORMAT --prefix="${PREFIX}$path" $ARCHIVE_OPTS ${TREEISH:-HEAD} > "$TMPDIR"/"$(echo "$path" | sed -e 's/\//./g')"$FORMAT
     if [ $FORMAT == 'zip' ]; then
         # delete the empty directory entry; zipped submodules won't unzip if we don't do this
         zip -d "$(tail -n 1 $TMPFILE)" "${PREFIX}${path%/}" >/dev/null 2>&1 || true # remove trailing '/'
@@ -272,14 +272,14 @@ fi
 # Concatenate archives into a super-archive.
 if [ $SEPARATE -eq 0 -o "-" == "$OUT_FILE" ]; then
     if [ $FORMAT == 'tar.gz' ]; then
-        gunzip $superfile
+        gunzip -f $superfile
         superfile=${superfile:0: -3} # Remove '.gz'
         sed -e '1d' $TMPFILE | while read file; do
-            gunzip $file
+            gunzip -f $file
             file=${file:0: -3}
             $TARCMD --concatenate -f "$superfile" "$file" && rm -f "$file"
         done
-        gzip $superfile
+        gzip -f $superfile
         superfile=$superfile.gz
     elif [ $FORMAT == 'tar' ]; then
         sed -e '1d' $TMPFILE | while read file; do

@@ -21,7 +21,7 @@ obj-$(CONFIG_D3_OVERLAY_LOADER) += overlay-loader/
 # The drivers that can be activated by the overlay loader
 obj-$(CONFIG_D3_UB960) += ub960/
 obj-$(CONFIG_D3_UB953) += ub953/
-# obj-y += max9296/
+obj-$(CONFIG_D3_MAX9296) += max9296/
 obj-$(CONFIG_D3_IMX390) += imx390/
 obj-$(CONFIG_D3_AR0820) += ar0820/
 obj-$(CONFIG_D3_VG6768) += vg6768/

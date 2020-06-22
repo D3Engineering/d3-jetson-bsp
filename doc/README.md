@@ -116,6 +116,10 @@ verbose output, add `KBUILD_VERBOSE=1`.
 At the end of a successful `make`, you will see the build ID.  You can also
 see the build ID of the most recent build by running `make show-config`.
 
+If the build fails while archiving and you see this error:
+`creating superproject archive...fatal: Not a valid object name`
+Make sure you have a real branch checked out and not a specific commit.
+
 ## Update the target with the new kernel and device tree
 
 On the **host**:

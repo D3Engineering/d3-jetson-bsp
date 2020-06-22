@@ -1,8 +1,5 @@
 /*
- * Copyright (c) 2018-2019, D3 Engineering.  All rights reserved.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
+ * Copyright (c) 2018-2019, D3 Engineering.  All rights reserved.  * * This program is free software; you can redistribute it and/or modify * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; version 2 of the License.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT
@@ -12,7 +9,6 @@
  */
 #include "d3-xavier.dtsi"
 #define D3_BOARD_XAVIER_CIC
-
 / {
 
 	/* I2C_CAM, DT alias: i2c2 (clock: C6, data: D6) */
@@ -70,27 +66,28 @@
 					csi-continuous-clock = <1>;
 
 					ds90ub960_link0: link@0 {
-						reg = <0>;
+						status = "okay";
+                                                reg = <0>;
 						#address-cells = <1>;
 						#size-cells = <0>;
 					};
 
 					ds90ub960_link1: link@1 {
-						status = "disabled";
+						status = "okay";
 						reg = <1>;
 						#address-cells = <1>;
 						#size-cells = <0>;
 					};
 
 					ds90ub960_link2: link@2 {
-						status = "disabled";
+						status = "okay";
 						reg = <2>;
 						#address-cells = <1>;
 						#size-cells = <0>;
 					};
 
 					ds90ub960_link3: link@3 {
-						status = "disabled";
+						status = "okay";
 						reg = <3>;
 						#address-cells = <1>;
 						#size-cells = <0>;
@@ -121,12 +118,14 @@
 					csi-lane-count = <4>;
 					csi-continuous-clock = <1>;
 					max9296_link0: link@0 {
+						status = "okay";
 						reg = <0>;
 						#address-cells = <1>;
 						#size-cells = <0>;
 					};
 
 					max9296_link1: link@1 {
+						status = "okay";
 						reg = <1>;
 						#address-cells = <1>;
 						#size-cells = <0>;
@@ -228,6 +227,7 @@
 	};
 
 	tegra-camera-platform {
+		compatible = "nvidia, tegra-camera-platform";
 		num_csi_lanes = <8>;
 		max_lane_speed = <1500000>;
 	};
@@ -246,5 +246,5 @@
 	num-channels = <6>;
 };
 
-#include "d3-cic-cam0.dtsi"
-#include "d3-cic-cam2.dtsi"
+#include "d3-cic-cam0-3.dtsi"
+#include "d3-cic-cam4.dtsi"

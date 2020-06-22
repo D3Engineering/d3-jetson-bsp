@@ -19,6 +19,7 @@
 / {
 	nvidia,dtsfilename = __FILE__;
 	nvidia,dtbbuildtime = __DATE__, __TIME__;
+	d3,dts-description = "DESC<Nvidia Jetson TX2 with DesignCore Nvidia Jetson SerDes Sensor Interface Card>DESC";
 	d3,jetson-bsp-version = D3_JETSON_BSP_VERSION;
 	d3,jetson-bsp-build-id = D3_JETSON_BSP_BUILDID;
 };

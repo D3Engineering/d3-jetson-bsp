@@ -5,26 +5,23 @@ dist_udev_DATA = \
 ispdir = /var/nvidia/nvcam/settings/
 dist_isp_DATA = \
 	target-overlay/var/nvidia/nvcam/settings/imx390.isp \
-	target-overlay/var/nvidia/nvcam/settings/ov10640.isp \
-	target-overlay/var/nvidia/nvcam/settings/ar0231-rgb.isp \
-	target-overlay/var/nvidia/nvcam/settings/ar0231-rcb.isp
+	target-overlay/var/nvidia/nvcam/settings/ov10640.isp
 
-bootdir = /boot/extlinux/
+bootdir = /boot/
 dist_boot_DATA = \
-	target-overlay/boot/extlinux/extlinux.conf
+	target-overlay/boot/boot-logo.blob
 
-# tegralibdir = /usr/lib/aarch64-linux-gnu/tegra/
-# dist_tegralib_DATA = \
-# 	target-overlay/usr/lib/aarch64-linux-gnu/tegra/libnvscf.so \
-# 	target-overlay/usr/lib/aarch64-linux-gnu/tegra/libnvodm_imager.so
+extlinuxdir = /boot/extlinux/
+dist_extlinux_DATA = \
+	target-overlay/boot/extlinux/extlinux.conf
 
 scriptsdir = /usr/bin/
 dist_scripts_DATA = \
 	scripts/d3-install-dtb \
-	scripts/d3-select-cameras
+	scripts/d3-select-cameras \
+	scripts/d3-build-tegra-media-api
 
 install-data-hook:
 	chmod 644 $(DESTDIR)/var/nvidia/nvcam/settings/imx390.isp
 	chmod 644 $(DESTDIR)/var/nvidia/nvcam/settings/ov10640.isp
-	chmod 644 $(DESTDIR)/var/nvidia/nvcam/settings/ar0231-rgb.isp
-	chmod 644 $(DESTDIR)/var/nvidia/nvcam/settings/ar0231-rcb.isp
+

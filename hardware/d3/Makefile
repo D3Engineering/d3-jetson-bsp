@@ -15,16 +15,6 @@ d3-dtb-y += d3-tx2-cic.dtb
 
 # Xavier CIC
 d3-dtb-y += d3-xavier-cic.dtb
-d3-dtb-y += d3-xavier-cic-imx390.dtb
-d3-dtb-y += d3-xavier-cic-imx390rcm.dtb
-d3-dtb-y += d3-xavier-cic-ov10640.dtb
-d3-dtb-y += d3-xavier-cic-vg6768.dtb
-d3-dtb-y += d3-xavier-cic-ar0820.dtb
 
 # Xavier 2xOcto
 d3-dtb-y += d3-xavier-2xocto.dtb
-d3-dtb-y += d3-xavier-2xocto-imx390.dtb
-d3-dtb-y += d3-xavier-2xocto-imx390rcm.dtb
-d3-dtb-y += d3-xavier-2xocto-ov10640.dtb
-d3-dtb-y += d3-xavier-2xocto-ar0820.dtb
-d3-dtb-y += d3-xavier-2xocto-vg6768.dtb

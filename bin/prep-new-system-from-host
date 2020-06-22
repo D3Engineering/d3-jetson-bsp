@@ -9,4 +9,4 @@ ssh -t $CRED 'sudo apt-get -y update && sudo apt-get install -y rsync'
 make sync-debug
 ssh -t $CRED 'cd debug; sudo ./prep-new-debug-system'
 ssh -t $CRED 'debug/disable-screen-lock'
-ssh -t $CRED 'cd debug; ./build-tm-api'
+ssh -t $CRED 'cd debug; ./d3-build-tegra-media-api'

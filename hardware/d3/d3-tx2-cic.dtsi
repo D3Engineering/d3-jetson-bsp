@@ -80,27 +80,28 @@
 					csi-continuous-clock = <1>;
 
 					ds90ub960_link0: link@0 {
+						status = "okay";
 						reg = <0>;
 						#address-cells = <1>;
 						#size-cells = <0>;
 					};
 
 					ds90ub960_link1: link@1 {
-						status = "disabled";
+						status = "okay";
 						reg = <1>;
 						#address-cells = <1>;
 						#size-cells = <0>;
 					};
 
 					ds90ub960_link2: link@2 {
-						status = "disabled";
+						status = "okay";
 						reg = <2>;
 						#address-cells = <1>;
 						#size-cells = <0>;
 					};
 
 					ds90ub960_link3: link@3 {
-						status = "disabled";
+						status = "okay";
 						reg = <3>;
 						#address-cells = <1>;
 						#size-cells = <0>;
@@ -260,7 +261,7 @@
 	};
 };
 
-#include "d3-cic-cam0.dtsi"
-#include "d3-cic-cam2.dtsi"
+#include "d3-cic-cam0-3.dtsi"
+#include "d3-cic-cam4.dtsi"
 
 #include "d3-config-eeprom.dtsi"

@@ -15,7 +15,7 @@
 #define CSI_PORT 3
 #define STATUS disabled
 #define TEGRA_SINTERFACE serial_d
-#define POSITION topleft
+#define POSITION CSI_PORT
 #define ORIENTATION 1
 #define ENDPOINT_A 6
 #define ENDPOINT_B 7

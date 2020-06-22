@@ -1,0 +1,26 @@
+/*
+ * Copyright (c) 2018-2019, D3 Engineering.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+
+/* UB953 */
+#include "templated-serializers/d3-ser-ub953-template.dtsi"
+
+/* Possible Cams*/
+#include "d3-tegra-nvcsi.dtsi"
+#include "templated-cameras/d3-cam-ov10640-template.dtsi"
+#include "templated-cameras/d3-cam-imx390-template.dtsi"
+#include "templated-cameras/d3-cam-imx390rcm-template.dtsi"
+//#include "templated-cameras/d3-cam-ar0233-fpdlink-template.dtsi"
+// TODO: This camera works, but adding support for it puts the DTB file over
+// the maximum size of 512 KB.
+//#include "templated-cameras/d3-cam-ar0820-fpdlink-template.dtsi"
+

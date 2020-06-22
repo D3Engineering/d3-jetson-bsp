@@ -1,5 +1,5 @@
 # Char-lite Calibration
-# command:     nv_wrapper 0 optical_black_file C:\Users\mroof\projects\NVIDIA\XavierIMX390\tuning\outputs\ob.cfg lsc C:\Users\mroof\projects\NVIDIA\XavierIMX390\tuning\outputs\lsc.cfg awb C:\Users\mroof\projects\NVIDIA\XavierIMX390\tuning\outputs\awb.cfg ccm C:\Users\mroof\projects\NVIDIA\XavierIMX390\tuning\outputs\ccm.cfg out_name C:\Users\mroof\projects\NVIDIA\XavierIMX390\tuning\outputs\camera_overrides.isp
+# command:     nv_wrapper 0 optical_black_file outputs\ob.cfg lsc outputs\lsc.cfg awb outputs\awb.cfg ccm outputs\ccm.cfg out_name outputs\camera_overrides.isp
 # version:     1.9.0
 # created on: 07-Jun-2019 13:40
 

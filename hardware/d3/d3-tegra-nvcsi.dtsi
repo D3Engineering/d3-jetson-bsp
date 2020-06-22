@@ -45,6 +45,7 @@
 				status = STR(STATUS);
 				port-index = <CSI_PORT>;
 				bus-width = <CSI_LANES>;
+				vc-id = <PORT_VCID>;
 			};
 		};
 	};

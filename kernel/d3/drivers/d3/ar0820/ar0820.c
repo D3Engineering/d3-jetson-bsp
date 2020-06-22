@@ -26,7 +26,7 @@
 #include <linux/of_device.h>
 
 
-#include <ar0820_tables.h>
+#include "ar0820_tables.h"
 
 /* #define AR0820_DEFAULT_FMT MEDIA_BUS_FMT_SRGGB12_1X12 */
 /* #define AR0820_DEFAULT_FMT MEDIA_BUS_FMT_SGRBG12_1X12 */

@@ -16,7 +16,6 @@
 /* General ports configuration */
 #define STATUS disabled
 #define ORIENTATION 1
-#define POSITION bottomleft
 
 #define IOVDD_SUPPLY <&p2822_vdd_1v8_cvb>
 #define AVDD_SUPPLY <&fpd_vdd_0_3>
@@ -42,6 +41,7 @@
 #define PORT_VCID 0
 #define DES_LINK 0
 #define PORT_IDX 0
+#define POSITION PORT_IDX
 #define ENDPOINT_A 0
 #define ENDPOINT_B 1
 #define SER_ADDR 40
@@ -49,13 +49,13 @@
 
 #include "d3-2xocto-cameras.dtsi"
 
-#if 0
 /* Port 1 */
 #include "d3-reset-port.dtsi"
 
 #define PORT_VCID 1
 #define DES_LINK 1
 #define PORT_IDX 1
+#define POSITION PORT_IDX
 #define ENDPOINT_A 2
 #define ENDPOINT_B 3
 #define SER_ADDR 41
@@ -69,6 +69,7 @@
 #define PORT_VCID 2
 #define DES_LINK 2
 #define PORT_IDX 2
+#define POSITION PORT_IDX
 #define ENDPOINT_A 4
 #define ENDPOINT_B 5
 #define SER_ADDR 42
@@ -82,10 +83,10 @@
 #define PORT_VCID 3
 #define DES_LINK 3
 #define PORT_IDX 3
+#define POSITION PORT_IDX
 #define ENDPOINT_A 6
 #define ENDPOINT_B 7
 #define SER_ADDR 43
 #define IMG_ADDR 63
 
 #include "d3-2xocto-cameras.dtsi"
-#endif

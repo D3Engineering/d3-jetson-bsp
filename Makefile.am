@@ -18,22 +18,30 @@ v_ = $(v_@AM_DEFAULT_V@)
 v_0 = @
 vecho = $(v)echo "  "
 
-VERSION_NAME=@D3_JETSON_BSP_VERSION@@VERSION_SUFFIX@
+# $(suppress_unless_v) will redirect stdout to /dev/null unless V=1.
+suppress_unless_v = $(suppress_unless_v_@AM_V@)
+suppress_unless_v_ = $(suppress_unless_v_@AM_DEFAULT_V@)
+suppress_unless_v_0 = > /dev/null
 
+LINUX_BUILD_CONFIG=@LINUX_BUILD_PATH@/.config
+D3_DEFAULT_CONFIG=kernel/d3/d3_defconfig
 linux_ZIMAGE=@LINUX_BUILD_PATH@/arch/arm64/boot/zImage
 linux_IMAGE=@LINUX_BUILD_PATH@/arch/arm64/boot/Image
 linux_SIGNED_IMAGE=@DEPLOY_BUILD_PATH@/boot/boot_sigheader.img.encrypt
 LINUX_PACKAGE_FILE=kernel/linux-image-4.9.140+@D3_JETSON_BSP_VERSION@-@CUSTOMER@+_1_arm64.deb
-BIN_RELEASE_DIR=d3-jetson-bsp-bin-$(VERSION_NAME)
-BIN_RELEASE_FILE=artifacts/d3-jetson-bsp-bin-$(VERSION_NAME).tar.gz
-SRC_RELEASE_FILE=artifacts/d3-jetson-bsp-src-$(VERSION_NAME).tar.gz
-ZIP_RELEASE_FILE=artifacts/d3-jetson-bsp-$(VERSION_NAME).zip
+BIN_RELEASE_DIR=d3-jetson-bsp-bin-@VERSION_NAME@
+BIN_RELEASE_FILE=@DEPLOY_BUILD_PATH@/d3-jetson-bsp-bin-@VERSION_NAME@.tar.gz
+SRC_RELEASE_FILE=@DEPLOY_BUILD_PATH@/d3-jetson-bsp-src-@VERSION_NAME@.tar.gz
+ZIP_RELEASE_FILE=artifacts/d3-jetson-bsp-@VERSION_NAME@.zip
+ZIP_RELEASE_STAGING_DIR=d3-jetson-bsp-@VERSION_NAME@
 RELNOTES_PDF_FILE=doc/D3-Jetson-BSP-Release-Notes.pdf
 RSYNC_OPTS=-ar --exclude=.git --no-owner --no-group $(if $V,--progress)
-UTIL_PACKAGE_FILE=d3-jetson-util_$(VERSION_NAME)-1_arm64.deb
-HASH_FILE=d3-jetson-bsp-bin-$(VERSION_NAME).sha1
+# Filename of the deb for d3-jetson-util.  Cannot be changed
+UTIL_PACKAGE_FILE=d3-jetson-util_@VERSION_NAME@-1_arm64.deb
+HASH_FILE=d3-jetson-bsp-bin-@VERSION_NAME@.sha1
 DTB_BUILD_PATH=@LINUX_BUILD_PATH@/arch/arm64/boot/dts/
 NVLIBS_PATH=debug/nvlibs
+BOOT_LOGO_FILE=d3-jetson-util/target-overlay/boot/boot-logo.blob
 TARGET_NVLIBS_PATH=/usr/lib/aarch64-linux-gnu/tegra/
 
 # Custom kernel configuration
@@ -45,10 +53,10 @@ SIGNED_DTB=$(DEPLOY_BUILD_PATH)/boot/$(patsubst %.dtb,%_sigheader.dtb.encrypt,$(
 # Chip ID passed into Tegra flash tools when signing DTB
 if XAVIER
 FLASH_CHIP_ID=0x19
-SYNC_TARGETS=sync-modules sync-boot sync-nvlibs sync-debug sync-dtb sync-kernel
+SYNC_TARGETS=sync-modules sync-boot sync-logo sync-nvlibs sync-debug sync-dtb sync-kernel
 else
 FLASH_CHIP_ID=0x18
-SYNC_TARGETS=sync-modules sync-boot sync-nvlibs sync-debug sync-dtb
+SYNC_TARGETS=sync-modules sync-boot sync-logo sync-nvlibs sync-debug sync-dtb
 endif
 
 
@@ -56,7 +64,18 @@ endif
 # kernel. Using ccflags-y would result in just about everything being
 # rebuilt every single time. Instead we'll only rebuild a single
 # module, build-id.
-D3_JETSON_BSP_BUILDID := '\"$(shell uuidgen -r)\"'
+#
+# Leading spaces required to hide this from automake --- see
+# https://patchwork.kernel.org/patch/6709921/
+#
+# Can't use make's ?= because it maps to =, not :=.
+ ifeq ($(origin D3_JETSON_BSP_BUILDID), undefined)
+ D3_JETSON_BSP_BUILDID := $(shell uuidgen -r)
+ endif
+export D3_JETSON_BSP_BUILDID
+
+$(warning ---------------- Build ID is $(D3_JETSON_BSP_BUILDID))
+
 D3_IMX390_HDR_ENABLE := $(shell if [ $$(@KERNEL_DIR@/scripts/config --file $(LINUX_BUILD_PATH)/.config -s d3_imx390_hdr_enable) == 'y' ]; then echo 1; else echo 0; fi)
 D3_OV10640_HDR_ENABLE := $(shell if [ $$(@KERNEL_DIR@/scripts/config --file $(LINUX_BUILD_PATH)/.config -s d3_ov10640_hdr_enable) == 'y' ]; then echo 1; else echo 0; fi)
 
@@ -88,10 +107,11 @@ define HELP_TEXT
 	deploy-clean    - deletes build artifacts in the deployment tree
 	sync            - rsyncs kernel, kernel modules, and dtb to target
 	sync-debug      - rsyncs debug/ to target
-	sync-kernel     - (Xavier only) copies signed kernel image to device and dd's it to the kernel memory partition
+	sync-kernel     - (Xavier only) copies signed kernel image to device and writes it to the kernel partition
 	sync-modules    - rsyncs kernel modules to target
 	sync-nvlibs     - copies nvidia libraries that have been modified from release to target
-	sync-dtb        - copies signed dtb to device and dd's it to the kernel-dtb memory partition
+	sync-dtb        - copies signed dtb to device and writes it to the kernel-dtb partition
+	sync-logo       - copies boot logo to device and writes it to the BMP partition
 	flash-dtb       - flashes dtb to target via USB (device in recovery mode)
 	flash-kernel    - (Xavier only) flashes kernel to target via USB (device in recovery mode)
 	linux-defconfig - prepares kernel with default D3 configuration
@@ -138,13 +158,12 @@ $(BIN_RELEASE_FILE): bin-kernel doc d3-jetson-util
 	$(vecho) "ID      $(D3_JETSON_BSP_BUILDID)"
 	$(vecho) "CP      PDFs"
 	$(v)cp "$(RELNOTES_PDF_FILE)" "$(BIN_RELEASE_DIR)"/doc/
-	$(v)cp "$(RELNOTES_PDF_FILE)" artifacts/
 	$(vecho) "CP      DTBs"
 	$(v)find kernel/kernel-4.9/arch/arm64 -type f -name '*.dtb' -exec cp {} "$(BIN_RELEASE_DIR)"/dtb/ ';'
 	$(vecho) "CP      SIGNED DTBs"
 	$(v)find kernel/kernel-4.9/arch/arm64 -type f -name '*_sigheader.dtb.encrypt' -exec cp {} "$(BIN_RELEASE_DIR)"/dtb/ ';'
 	$(vecho) "CP      kernel package"
-	$(v)cp "$(LINUX_PACKAGE_FILE)" "$(BIN_RELEASE_DIR)"
+	$(v)cp "./l4t-submodules/$(LINUX_PACKAGE_FILE)" "$(BIN_RELEASE_DIR)"
 	$(vecho) "GEN     $(HASH_FILE)"
 	$(v)find "$(BIN_RELEASE_DIR)" -type f -exec sha1sum {} ';' >> "$(HASH_FILE)"
 	$(v)mv "$(HASH_FILE)" "$(BIN_RELEASE_DIR)"
@@ -153,10 +172,10 @@ $(BIN_RELEASE_FILE): bin-kernel doc d3-jetson-util
 release-bin: $(BIN_RELEASE_FILE)
 
 
-$(LINUX_PACKAGE_FILE):
+$(LINUX_PACKAGE_FILE): bin/kernel-deb
 	$(AM_V_GEN)
 	$(v)bin/kernel-deb @CUSTOMER@ '@D3_JETSON_BSP_VERSION@'
-	$(v)cp "$(LINUX_PACKAGE_FILE)" "@DEPLOY_BUILD_PATH@/"
+	$(v)cp "./l4t-submodules/$(LINUX_PACKAGE_FILE)" "@DEPLOY_BUILD_PATH@/"
 bin-kernel: $(LINUX_PACKAGE_FILE)
 
 
@@ -165,7 +184,7 @@ $(SRC_RELEASE_FILE):
 	$(v)bin/git-archive-all.sh \
 	--verbose \
 	--format tar.gz \
-	--prefix d3-jetson-bsp-src-$(VERSION_NAME)/ \
+	--prefix d3-jetson-bsp-src-@VERSION_NAME@/ \
 	--tree-ish $(GIT_BRANCH) \
 	$(SRC_RELEASE_FILE)
 release-src: $(SRC_RELEASE_FILE)
@@ -258,6 +277,11 @@ sync-nvlibs:
 	$(v) if [ -e $(NVLIBS_PATH) ]; then scp $(NVLIBS_PATH)/* $(TARGET_HOST):$(TARGET_NVLIBS_PATH); fi
 	$(v)ssh @TARGET_HOST@ sync
 
+sync-logo: $(BOOT_LOGO_FILE)
+	$(vecho) "SYNC     $(BOOT_LOGO_FILE)"
+	$(v)scp $(BOOT_LOGO_FILE) $(TARGET_HOST):debug/boot-logo.blob
+	$(v)ssh @TARGET_HOST@ 'sudo dd if=debug/boot-logo.blob of=/dev/disk/by-partlabel/BMP && sync'
+
 sync: $(SYNC_TARGETS)
 	$(v)echo "Run 'make reboot' when ready"
 
@@ -311,7 +335,7 @@ endif
 
 show-config:
 	$(vecho) "     -D3 Configuration-"
-	$(vecho) "Version          : $(VERSION_NAME)"
+	$(vecho) "Version          : @VERSION_NAME@"
 	$(vecho) "System Type      : @SYSTEM_TYPE@"
 	$(vecho) "Target Host      : @TARGET_HOST@"
 	$(vecho) "Kernel config    : $(if @KCONFIG_FILE@,@KCONFIG_FILE@,<default>)"
