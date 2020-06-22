@@ -80,7 +80,7 @@ D3_IMX390_HDR_ENABLE := $(shell if [ $$(@KERNEL_DIR@/scripts/config --file $(LIN
 D3_OV10640_HDR_ENABLE := $(shell if [ $$(@KERNEL_DIR@/scripts/config --file $(LINUX_BUILD_PATH)/.config -s d3_ov10640_hdr_enable) == 'y' ]; then echo 1; else echo 0; fi)
 
 # These flags are passed to cpp when building the dtb
-export D3_DTCCPP_FLAGS=-DD3_JETSON_BSP_BUILDID='$(D3_JETSON_BSP_BUILDID)' -DD3_IMX390_HDR_ENABLE=$(D3_IMX390_HDR_ENABLE) -DD3_OV10640_HDR_ENABLE=$(D3_OV10640_HDR_ENABLE)
+export D3_DTCCPP_FLAGS=-DD3_JETSON_BSP_BUILDID='"$(D3_JETSON_BSP_BUILDID)"' -DD3_IMX390_HDR_ENABLE=$(D3_IMX390_HDR_ENABLE) -DD3_OV10640_HDR_ENABLE=$(D3_OV10640_HDR_ENABLE)
 
 # Make all of the directories we need exist.
 $(shell  mkdir -p "$(BIN_RELEASE_DIR)/doc" "$(BIN_RELEASE_DIR)/dtb" "@DEPLOY_BUILD_PATH@" "@LINUX_BUILD_PATH@" "@DEPLOY_BUILD_PATH@/boot" artifacts)
