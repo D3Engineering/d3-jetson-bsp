@@ -3,7 +3,6 @@
 # for that below.
 
 echo "Started building at $(date) on $(hostname)"
-    # Compare to job-start time to see how long the clone took
 set -o errexit
 set -o pipefail
 
@@ -23,9 +22,6 @@ function branch_info() {
 }
 
 ###########################################
-
-# Leave this turned on!  It makes debugging much easier.
-set -x
 
 # Is the repo dirty?
 if git status --porcelain=v2 | grep -q . ; then
@@ -51,17 +47,17 @@ elif [[ "$jenkins" ]]; then
     # If no command options, default to using remote branch mode
     fresh_in_place=
     case $1 in
-        # Build using the commit Jenkins checked out
-        --fresh-in-place)
-            fresh_in_place=1
-            # Needed for git-archive-all.sh
-            export GIT_BRANCH=$GIT_COMMIT
-            ;;
+	# Build using the commit Jenkins checked out
+    	--fresh-in-place) 
+	    fresh_in_place=1
+	    # Needed for git-archive-all.sh
+	    export GIT_BRANCH=$GIT_COMMIT
+	    ;;
 
-        # Build using the remote branch specified by user in Jenkins
-        *)
-            export GIT_BRANCH="$(echo "$1" | sed -E 's/^[^\/]+\///')"
-            ;;
+	# Build using the remote branch specified by user in Jenkins
+	*)
+    	    export GIT_BRANCH="$(echo "$1" | sed -E 's/^[^\/]+\///')"
+	    ;;
     esac
 
 elif [[ -z "$jenkins" && "$1" ]]; then
@@ -89,8 +85,8 @@ if [[ -z "$fresh_in_place" ]]; then
     fi
 
     if [[ -z "$upstream_remote" ]]; then
-        echo "Could not find upstream remote for branch $GIT_BRANCH" 1>&2
-        exit 1
+    	echo "Could not find upstream remote for branch $GIT_BRANCH" 1>&2
+    	exit 1
     fi
 
     upstream_url="$(git remote get-url "$upstream_remote")"
@@ -105,17 +101,16 @@ fi
 if [[ "$jenkins" ]]; then
     # If build was triggered manually, clear out the initial clone that Jenkins did...
     if [[ -z "$fresh_in_place" ]]; then
-        time find . -mindepth 1 -maxdepth 1 -exec rm -rf {} +
-
-        # ... and replace it with a shallow clone of everything.
-        echo "Cloning recursively from $upstream_remote at $upstream_url"
-        time git clone -v "$upstream_url" '.' \
+	time find . -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+    	# ... and replace it with a shallow clone of everything.
+    	echo "Cloning recursively from $upstream_remote at $upstream_url"
+    	time git clone -v "$upstream_url" '.' \
             --recurse-submodules --shallow-submodules --depth 1 --single-branch \
             --branch "$GIT_BRANCH"
     elif [[ "$fresh_in_place" ]]; then
-        # If build was triggered by Gerrit, update submodules with depth=1
-        echo "Updating submodules"
-        git submodule update --init --recursive --depth 1
+	# If build was triggered by Gerrit, update submodules with depth=1
+	echo "Updating submodules"
+	git submodule update --init --recursive --depth 1
     fi
 else
     # Update submodules, just in case it hasn't been done
@@ -138,12 +133,15 @@ fi
 # Generate the configure script from configure.ac
 ./bootstrap
 CONFIG_SHELL=/bin/bash /bin/bash ./configure \
-    --with-l4t=/opt/nvidia/JetPack_4.3_Linux_P2888/Linux_for_Tegra
+    --with-l4t=/opt/nvidia/JetPack_4.2.2_Linux_GA_P2888/Linux_for_Tegra
 
-# Pull in our kernel configuration.
-make linux-defconfig
+# Assumes arm64, which Jetson always is ;) .
+ARCH=arm64 make linux-defconfig
 
 # Build all the things in all the land.
-make release-zip
+#make --debug=bj release-zip     # for debugging
 
+# Normal build
+export CONCURRENCY_LEVEL="$(grep -c '^processor' /proc/cpuinfo)"
+make -j"$CONCURRENCY_LEVEL" release-zip
 echo "Finished building at $(date)"

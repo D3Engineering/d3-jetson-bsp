@@ -1,11 +1,10 @@
-#!/bin/sh
+#!/bin/bash
 
-# Create symlinks for ISP configurations. 
+# Create symlinks for ISP configurations.
 isp_symlinks()
 {
-
     cd /var/nvidia/nvcam/settings/
-    for p in $(perl -E 'say foreach 0..9, "A".."F"'); do
+    for p in {0..9} {A..F}; do
         TARGET_OV10640="d3_${p}_ov10640.isp"
         TARGET_IMX390="d3_${p}_imx390.isp"
         TARGET_IMX390RCM="d3_${p}_imx390rcm.isp"
@@ -22,10 +21,6 @@ isp_symlinks()
     done
 }
 
-# is_xavier()
-# {
-#     egrep -q '^TEGRA_CHIPID 0x19$' /etc/nv_boot_control.conf
-# }
 
 argus_enable_infinite_cam_timeout()
 {
@@ -34,6 +29,7 @@ argus_enable_infinite_cam_timeout()
     sed -i '/^\[Service\]$/ a Environment="enableCamInfiniteTimeout=1"' \
         /etc/systemd/system/nvargus-daemon.service
 }
+
 
 echo 'Updating ISP overrides...'
 isp_symlinks

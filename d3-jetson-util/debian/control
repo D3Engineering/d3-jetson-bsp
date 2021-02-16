@@ -17,6 +17,7 @@ Depends: libcurses-ui-perl,
          libencode-locale-perl,
          libfile-find-object-rule-perl,
          perl-doc,
+         dialog,
          ${misc:Depends}, ${perl:Depends}
 Recommends: v4l-utils
 Description: Supplemental materials for D3 Jetson hardware.

@@ -16,6 +16,7 @@
 #include "templated-cameras/d3-reset-cam.dtsi"
 #include "templated-serializers/d3-reset-ser.dtsi"
 #include "templated-deserializers/d3-reset-des.dtsi"
+#include "d3-reset-port.dtsi"
 
 #undef DES_NODE
 #undef DES_LINK_NODE

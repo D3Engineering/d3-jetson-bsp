@@ -1,0 +1,390 @@
+#!/bin/bash
+# d3-select-cameras-boot.sh
+#
+# Copyright (C) 2020 D3 Engineering <thart@d3engineering.com>
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; version 2 of the License.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+DEBUG=
+
+D_WIDTH=40
+DT_BASE_PATH="/proc/device-tree/"
+OVERLAYS_PATH="$DT_BASE_PATH/overlay-loader/"
+EXTLINUX_CONF_PATH="/boot/extlinux/extlinux.conf"
+DIALOG_COMMON_FLAGS=(--backtitle "D3 Engineering"
+	--title "D3 Camera Selection")
+
+AVAILABLE_OVERLAYS=()
+ACTIVE_OVERLAYS=()
+
+function pr {
+	printf "\\e[36m[d3-select-cameras-boot]\\e[0m "
+	printf "%s\\n" "$@"
+}
+
+function pr_err {
+	printf "\\e[36m[d3-select-cameras-boot]\\e[31m " >&2
+	printf "%s\\n" "$@" >&2
+	printf "\\e[0m" >&2
+}
+
+function pr_dbg {
+	if (( DEBUG )); then
+		printf "\\e[36m[d3-select-cameras-boot]\\e[96m "
+		printf "%s\\n" "$@"
+		printf "\\e[0m"
+	fi
+}
+
+# get_param -- Echos the param value of a device-tree fragment.
+#
+# @stdout Used for param value
+# $1 The name of the fragment to read
+function get_param {
+	local frag_name="$1"
+	local frag_path="$OVERLAYS_PATH/$frag_name/"
+	local frag_param_path="$frag_path/param"
+	local frag_param_val=""
+
+	if [[ ! -d "$frag_path" ]]; then
+		pr_dbg "$frag_name is not a directory/fragment."
+		return 1
+	elif [[ ! -f "$frag_param_path" ]]; then
+		pr_dbg "$frag_name missing a \"param\" attribute! Ignoring."
+		return 1
+	else
+		frag_param_val="$(tr -d '\0' <"$frag_param_path")"
+	fi
+
+	echo "$frag_param_val"
+	return 0
+}
+
+# get_cam_menu_elem -- Echos the values of a camera parameter for a
+# dialog menu.
+#
+# $1 The 'param' value used for the desired camera
+# @stdout Used for dialog menu element string
+# @return Unused
+function get_cam_menu_elem {
+	local param="$1"
+	local status="off"
+	if [[ ! " ${AVAILABLE_OVERLAYS[@]} " =~ " ${param} " ]]; then
+		pr_err "$param is not a valid overlay"
+	fi
+	if [[ " ${ACTIVE_OVERLAYS[@]} " =~ " ${param} " ]]; then
+		status="on"
+	fi
+	echo "$param \"Camera\" $status"
+}
+
+# get_port_menu_elem -- Echos the values of a cam port parameter for a
+# dialog menu.
+#
+# $1 The 'param' value used for the desired camera
+# @stdout Used for dialog menu element string
+# @return Unused
+function get_port_menu_elem {
+	local port_id="$1"
+	for cam_param in "${ACTIVE_OVERLAYS[@]}"; do
+		if echo "$cam_param" | grep -q "_$port_id\$"; then
+			echo "$port_id \"Port $port_id ($cam_param)\""
+			return
+		fi
+	done
+	echo "$port_id \"Port $port_id\""
+}
+
+# draw_port_list -- Creates a cam port menu based on current ACTIVE_OVERLAYS
+# and AVAILABLE_OVERLAYS values. Calls draw_cam_list if a port is selected.
+#
+# @return The dialog exit status
+function draw_port_list {
+	local port_id_arr=()
+	local port_id_str=""
+	local port_id_cnt=0
+
+	# get array of port_id
+	for cam_param in "${AVAILABLE_OVERLAYS[@]}"; do
+		local port_id="${cam_param##*_}"
+		port_id_arr+=("$port_id")
+	done
+
+	# sort numerically and remove duplicate ports
+	port_id_arr=($(printf "%s\\n" "${port_id_arr[@]}" | sort -un))
+	for port_id in "${port_id_arr[@]}"; do
+		port_id_str+=" $(get_port_menu_elem "$port_id")"
+		((port_id_cnt++))
+	done
+
+	# convert to array (preserves double quotes)
+	IFS=$'\n'
+	port_id_str_arr=( $(xargs -n1 <<<"$port_id_str") )
+	unset IFS
+
+	# run dialog (use file descriptor to show ui in stdout)
+	exec 3>&1;
+	port_id=$(dialog "${DIALOG_COMMON_FLAGS[@]}" --cancel-label "Apply" \
+		--menu "Port Select" "" "$D_WIDTH" "$port_id_cnt" \
+		"${port_id_str_arr[@]}" 2>&1 1>&3)
+	local d_ret=$?
+	exec 3>&-;
+
+	# return on failure of dialog
+	if [[ "$d_ret" -ne 0 ]]; then
+		return "$d_ret"
+	fi
+
+	# open cam menu
+	draw_cam_list "$port_id"
+	return 0
+}
+
+# draw_cam_list -- Creates a camera select menu based on current
+# ACTIVE_OVERLAYS and AVAILABLE_OVERLAYS values.
+#
+# $1 Port ID to show the camera select dialog for
+# @return Unused
+function draw_cam_list {
+	local port_id="$1"
+	local cam_param_str=""
+	local cam_param_arr=()
+	local cam_param_menu_arr=()
+	local cam_param_cnt=0
+	local NO_CAM_STR="None"
+	local NO_CAM_DESC="Disable port"
+	local NO_CAM_STATUS="on"
+
+	# get cams for port_id
+	for cam_param in "${AVAILABLE_OVERLAYS[@]}"; do
+		if echo "$cam_param" | grep -q "_$port_id\$"; then
+			cam_param_str+=" $(get_cam_menu_elem "$cam_param")"
+			cam_param_arr+=("$cam_param")
+			((cam_param_cnt++))
+		fi
+	done
+
+	# convert to array (preserves double quotes)
+	IFS=$'\n'
+	cam_param_menu_arr=( $(xargs -n1 <<<"$cam_param_str") )
+	unset IFS
+
+	# add in an option for no camera
+	for cam_param in "${cam_param_arr[@]}"; do
+		if [[ " ${ACTIVE_OVERLAYS[@]} " =~ " ${cam_param} " ]]; then
+			NO_CAM_STATUS="off"
+			break
+		fi
+	done
+	cam_param_menu_arr=( "$NO_CAM_STR" "$NO_CAM_DESC" "$NO_CAM_STATUS" "${cam_param_menu_arr[@]}")
+
+	# run dialog (use file descriptor to show ui in stdout)
+	exec 3>&1;
+	s_cam=$(dialog "${DIALOG_COMMON_FLAGS[@]}" --no-cancel \
+		--ok-label "Back" --radiolist "Port $port_id Cameras \\n(Select using spacebar)" \
+		"" "$D_WIDTH" "$((cam_param_cnt + 1))" "${cam_param_menu_arr[@]}" 2>&1 1>&3)
+	local d_ret=$?
+	exec 3>&-;
+
+	# remove old ACTIVE_CAMS for port_id
+	for cam_param in "${cam_param_arr[@]}"; do
+		for ao_idx in "${!ACTIVE_OVERLAYS[@]}"; do
+			if [[ "${ACTIVE_OVERLAYS[ao_idx]}" = "$cam_param" ]]; then
+				unset 'ACTIVE_OVERLAYS[ao_idx]'
+			fi
+		done
+	done
+
+	# check if "None" option was selected
+	if [[ "$s_cam" == "$NO_CAM_STR" ]]; then
+		return
+	fi
+
+	# add selected cams to ACTIVE_CAMS
+	s_cam_arr=($s_cam)
+	ACTIVE_OVERLAYS+=( "${s_cam_arr[@]}" )
+}
+
+# draw_save_warning -- Creates a popup to ensure the user wants to save their
+# new selection.
+#
+# @return The exit status of dialog
+# 0 = save changes
+# 1 = discard changes
+# 3 = "back"
+# 255 = user mashed escape, choosing nothing
+function draw_save_warning {
+	local ret
+	dialog "${DIALOG_COMMON_FLAGS[@]}" --extra-button --extra-label "Back"\
+		--ok-label "Save" --cancel-label "Exit" --yesno \
+		"Would you like to apply current changes?\\n\\n$(get_active_overlays_str)"\
+		12 40
+	ret=$?
+	return $ret
+}
+
+# populate_available_params -- Reads active device tree from $OVERLAYS_PATH to
+# determine available overlays and populates the AVAILABLE_OVERLAYS array.
+#
+# @stdout Used for user info (debug)
+# @return 1 if no params found. Else 0.
+function populate_available_params {
+	for fragment in "$OVERLAYS_PATH"/*; do
+		retval="$(get_param "$(basename "$fragment")")"
+		if [[ -n "$retval" ]]; then
+			pr_dbg "Found overlay param $retval"
+			AVAILABLE_OVERLAYS+=("$retval")
+		fi
+	done
+
+	# check if overlays found
+	if (( "${#AVAILABLE_OVERLAYS[@]}" < 1 )); then
+		return 1
+	fi
+	return 0
+}
+
+# get_active_overlays_str -- Creates an active_overlays string based on values
+# in the ACTIVE_OVERLAYS array.
+#
+# @stdout Echos the finished string
+# @return Unused
+function get_active_overlays_str {
+	local params_str=""
+	local param_cnt=0
+	ACTIVE_OVERLAYS=($(printf "%s\\n" "${ACTIVE_OVERLAYS[@]}" | sort -n))
+	for cam_param in "${ACTIVE_OVERLAYS[@]}"; do
+		if (( param_cnt == 0 )); then
+			params_str+="$cam_param"
+		else
+			params_str+=",$cam_param"
+		fi
+		((param_cnt++))
+	done
+	echo "active_overlays=$params_str"
+}
+
+# populate_active_overlays -- Takes an active_overlays string and fills the
+# ACTIVE_OVERLAYS bash array.
+#
+# Will create an ncurses warning and remove any element of the supplied
+# active_overlays string that is not in AVAILABLE_OVERLAYS.
+#
+# @return Unused
+function populate_active_overlays {
+	local ret
+	local tmp_active_overlays
+	local err_msg
+	# turn the captured active_overlays value into a bash array
+	tmp_active_overlays=( ${1//,/ } )
+	# validates that all params in active_overlays are currently loaded
+	# device tree
+	for overlay in "${tmp_active_overlays[@]}"; do
+		if [[ ! " ${AVAILABLE_OVERLAYS[@]} " =~ " ${overlay} " ]]; then
+			err_msg="Camera Overlay $overlay is not available with "
+			err_msg+="the active device tree and will be removed "
+			err_msg+="when the new selection is applied."
+			if (( INTERACTIVE_DISABLE )); then
+				pr_err "$err_msg Ensure spelling is correct."
+			else
+				dialog "${DIALOG_COMMON_FLAGS[@]}" --msgbox \
+					"$err_msg"\
+					10 40
+			fi
+			tmp_active_overlays=( "${tmp_active_overlays[@]/$overlay}" )
+		fi
+	done
+	# saves the imported active_overlays array to a global
+	ACTIVE_OVERLAYS=( ${tmp_active_overlays[@]} )
+}
+
+# extlinux_conf_import -- Imports the current values of extlinux.conf file.
+# Will terminate script if there is no "active_overlays=" in the device tree.
+#
+# @return Unused
+function extlinux_conf_import {
+	local ret
+	local ext_str
+	# search and capture the current value of active_overlays from the
+	# current extlinux.conf file
+	ext_str="$(grep -m 1 -oP "active_overlays=\\K[^ ]*" "$EXTLINUX_CONF_PATH")"
+	ret=$?
+	if [[ $ret -ne 0 ]]; then
+		pr_err "No \"active_overlays\" element in $EXTLINUX_CONF_PATH! Make sure d3-jetson-util has been installed."
+		exit 1
+	fi
+	populate_active_overlays "$ext_str"
+}
+
+# extlinux_conf_export -- Exports values in ACTIVE_OVERLAYS to the system's
+# extlinux.conf file. Assumes that "active_overlays" is present in the kernel
+# commandline.
+#
+# @stdout Used for user info
+# @return Unused
+function extlinux_conf_export {
+	sed -i "s/active_overlays=[^ ]*/$(get_active_overlays_str)/g" \
+		"$EXTLINUX_CONF_PATH"
+	pr "Wrote into extlinux.conf"
+}
+
+
+set -o pipefail
+# Disables intereactive output of some commands.
+# Useful for CLI execution with flags.
+INTERACTIVE_DISABLE=
+[[ -t 0 && -t 1 ]] || { pr_err "Can't run - not on a terminal"; exit; }
+(( EUID == 0 )) || exec sudo "$0" "$@" # force root
+while getopts 'a::' flag; do
+	case "$flag" in
+		a) 	MANUAL_ACTIVE_OVERLAYS_STR="${OPTARG}"
+			INTERACTIVE_DISABLE=1;;
+	esac
+done
+# check for dialog
+if ! command -v dialog &> /dev/null && ((!INTERACTIVE_DISABLE)); then
+	pr_err "Dialog package not found on system. Ensure it is installed!"
+	exit 1
+fi
+# attempt to read /proc/device-tree
+if ! populate_available_params; then
+	pr_err "No overlays found in device tree."
+	pr_err "Please run d3-install-dtb and reboot."
+	exit 1
+fi
+# check for manual param
+if [[ -n $MANUAL_ACTIVE_OVERLAYS_STR ]]; then
+	populate_active_overlays "$MANUAL_ACTIVE_OVERLAYS_STR"
+	pr "Applying manual active_overlays string: $(get_active_overlays_str)"
+	extlinux_conf_export
+	pr "Camera selection applied!"
+	exit
+fi
+# attempt to read current extlinux.conf
+extlinux_conf_import
+# enter tui loop
+while true; do
+	draw_port_list
+	ret=$?
+	if (( ret )); then
+		draw_save_warning
+		ret=$?
+		if (( ret == 1 || ret == 255 )) ; then
+			clear
+			pr "Camera selection discarded."
+			exit
+		elif (( ret == 0 )); then
+			clear
+			extlinux_conf_export
+			pr "Camera selection applied!"
+			exit
+		fi
+	fi
+done

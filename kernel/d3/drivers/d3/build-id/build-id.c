@@ -27,7 +27,11 @@ MODULE_AUTHOR("Greg Rowe <growe@d3engineering.com>");
 MODULE_LICENSE("GPL v2");
 
 
-static void buildid_check_dtb_match(void) {
+/* Do not make this function static - we check for it in System.map
+ * to confirm that at least this D3 driver has been compiled into
+ * the kernel.
+ */
+void buildid_check_dtb_match(void) {
 	static const char *NAME = "d3,jetson-bsp-build-id";
 	const char *build_id = NULL;
 

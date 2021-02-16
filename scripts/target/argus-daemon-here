@@ -1,0 +1,90 @@
+#!/usr/bin/env perl
+# argus-daemon-here: Run nvargus-daemon in the current window
+
+use 5.010;
+use strict;
+use warnings;
+use autodie;    # default, not :all, so we don't require IPC::Simple::System
+
+use Getopt::Long 2.33 qw(GetOptionsFromArray
+                          :config gnu_getopt auto_version auto_help);
+use Pod::Usage;
+
+exit main(@ARGV);
+
+# ==========================================================================
+
+=head1 NAME
+
+argus-daemon-here - run nvargus-daemon in a terminal
+
+=head1 SYNOPSIS
+
+    argus-daemon-here [options]
+
+=head1 OPTIONS
+
+=over
+
+=item --strace
+
+Run nvargus-daemon under strace(1).
+
+=back
+
+=cut
+
+# ==========================================================================
+
+use constant { true => !!1, false => !!0 };
+
+sub main {
+    # Options
+    my %opts;
+    GetOptionsFromArray(\@_, \%opts,
+        'strace!',
+    ) or pod2usage(1);
+
+    # Do the work
+    system('sudo killall nvargus-daemon');
+
+    $ENV{enableCamInfiniteTimeout}=1;
+
+    # More debugging?  From https://devtalk.nvidia.com/default/topic/1025036/jetson-tx2/libargus-and-gstreamer-not-working-with-ported-ov5647-driver/post/5213900/#5213900 .
+    # These symbols are used in /usr/lib/aarch64-linux-gnu/tegra/libnvcamlog.so .
+    $ENV{enableCamCaptureLogs}=1;
+    $ENV{enableCamCoreLogs}=1;
+    $ENV{enableCamHalLogs}=1;
+    $ENV{enableCamLogs}=1;
+    $ENV{enableCamPclLogs}=5;
+    $ENV{enableCamScfLogs}=5;
+    $ENV{enableCamTraces}=1;
+
+    say '=== Available cameras ===';
+    for my $moduledir (</proc/device-tree/tegra-camera-platform/modules/module*>) {
+        next unless -r "$moduledir/badge";
+        no autodie;
+        open my $badgefd, '<', "${moduledir}/badge" or next;
+        read $badgefd, my $badge, ((-s $badgefd) - 1);    # skip the trailing \0
+        next if $!;
+        say "$moduledir  $badge";
+    }
+
+    my $strace = $opts{strace} ? 'strace -f' : '';  # -f = also trace children
+    system("sudo $strace nvargus-daemon");
+    return(0xff &   ( ($? & 0x7f)   ? (128 + ($? & 0x7f))   # killed by signal
+                                    : ($?>>8)               # exited
+                    ));
+} #main()
+
+__END__
+
+=head1 AUTHOR
+
+Christopher White, C<< <cwhite@d3engineering.com> >>
+
+=head1 COPYRIGHT
+
+Copyright (c) 2019 D3 Engineering, LLC.  All Rights Reserved.
+
+=cut

@@ -1,0 +1,34 @@
+#!/bin/bash
+
+# Save extlinux.conf so the system doesn't get semi-bricked if the
+# utils package is uninstalled.
+
+E_CONF='/boot/extlinux/extlinux.conf'
+if [ -e "$E_CONF" ]; then
+    cp "$E_CONF" "${E_CONF}-"
+fi
+
+# Check L4T version for compatibility
+# Intended version
+JETPACK_VER="@JP_VERSION@"
+L4T_EXPECTED="@L4T_VERSION@"
+
+# Get the L4T version currently installed
+L4T_VER="$(perl -ne 'exit 1 unless /R([\d\.]+).*?REVISION: ([\d\.]+)/; print "$1.$2\n"; exit 0' /etc/nv_tegra_release)"
+GOT_VER_OK="$?"
+
+if [[ "$L4T_VER" != "$L4T_EXPECTED" || "$GOT_VER_OK" -ne 0 ]]; then
+    if [[ -n "$L4T_VER" && "$GOT_VER_OK" -eq 0 ]]; then
+        printf "\e[33mWARNING:\e[0m This release is meant for Linux for Tegra v"$L4T_EXPECTED" (JetPack "$JETPACK_VER").\nCompatibility with the installed version (v"$L4T_VER") cannot be guaranteed.\nInstall anyway? (y/n):"
+    else
+        printf "\e[33mWARNING:\e[0m Unable to determine installed version of Linux for Tegra.\nIf version "$L4T_EXPECTED" is installed, you may continue.\nOtherwise, compatibility cannot be guaranteed.\nContinue installation? (y/n):"
+    fi
+
+    while read choice; do
+        case "$choice" in
+            y|Y ) break;;
+            n|N ) echo "Aborting..."; exit 1;;
+            * ) echo "Enter y or n:";;
+        esac
+    done
+fi

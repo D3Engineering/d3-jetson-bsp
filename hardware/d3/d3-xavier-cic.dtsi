@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2018-2019, D3 Engineering.  All rights reserved.  * * This program is free software; you can redistribute it and/or modify * it under the terms of the GNU General Public License as published by
+ * Copyright (c) 2018-2020, D3 Engineering.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; version 2 of the License.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT
@@ -227,7 +230,6 @@
 	};
 
 	tegra-camera-platform {
-		compatible = "nvidia, tegra-camera-platform";
 		num_csi_lanes = <8>;
 		max_lane_speed = <1500000>;
 	};
@@ -247,4 +249,4 @@
 };
 
 #include "d3-cic-cam0-3.dtsi"
-#include "d3-cic-cam4.dtsi"
+#include "d3-cic-cam4-5.dtsi"

@@ -91,38 +91,7 @@ static struct config_eeprom_data *config_eeprom_load_from_eeprom(void)
 			break;
 		}
 
-		/* Brute force!  Made with Vim. */
-		snprintf(str, DEBUG_BUFSIZE, "Got EEPROM data: "
-				"%02x %02x %02x %02x "
-				"%02x %02x %02x %02x  "
-				"%02x %02x %02x %02x "
-				"%02x %02x %02x %02x "
-				"%c%c%c%c%c%c%c%c "
-				"%c%c%c%c%c%c%c%c\n",
-				d[0], d[1], d[2], d[3],
-				d[4], d[5], d[6], d[7],
-				d[8], d[9], d[10], d[11],
-				d[12], d[13], d[14], d[15],
-				(d[0] < 32 || d[0] >= 127) ? '.' : d[0],
-				(d[1] < 32 || d[1] >= 127) ? '.' : d[1],
-				(d[2] < 32 || d[2] >= 127) ? '.' : d[2],
-				(d[3] < 32 || d[3] >= 127) ? '.' : d[3],
-				(d[4] < 32 || d[4] >= 127) ? '.' : d[4],
-				(d[5] < 32 || d[5] >= 127) ? '.' : d[5],
-				(d[6] < 32 || d[6] >= 127) ? '.' : d[6],
-				(d[7] < 32 || d[7] >= 127) ? '.' : d[7],
-				(d[8] < 32 || d[8] >= 127) ? '.' : d[8],
-				(d[9] < 32 || d[9] >= 127) ? '.' : d[9],
-				(d[10] < 32 || d[10] >= 127) ? '.' : d[10],
-				(d[11] < 32 || d[11] >= 127) ? '.' : d[11],
-				(d[12] < 32 || d[12] >= 127) ? '.' : d[12],
-				(d[13] < 32 || d[13] >= 127) ? '.' : d[13],
-				(d[14] < 32 || d[14] >= 127) ? '.' : d[14],
-				(d[15] < 32 || d[15] >= 127) ? '.' : d[15]
-		);
-
-		pr_info(MODULE_NAME ": %s\n", str);
-
+		print_hex_dump_bytes("eeprom ", DUMP_PREFIX_OFFSET, d, 16);
 #endif //DEBUG_DUMP
 
 		retval = vmalloc(sizeof(struct config_eeprom_data));

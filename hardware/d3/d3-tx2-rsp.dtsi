@@ -137,10 +137,6 @@
 			#gpio-cells = <2>;
 			gpio-controller;
 			vcc-supply = <&vdd_1v8_ap>;
-			/* #interrupt-cells = <2>; */
-			/* interrupt-controller; */
-			/* interrupt-parent = <&tegra_main_gpio>; */
-			/* interrupts = <TEGRA_MAIN_GPIO(B, 4) IRQ_TYPE_EDGE_BOTH>; */
 		};
 
 		gpio_i2c_8_75: tca9539@75 {
@@ -150,10 +146,6 @@
 			#gpio-cells = <2>;
 			gpio-controller;
 			vcc-supply = <&vdd_1v8_ap>;
-			/* #interrupt-cells = <2>; */
-			/* interrupt-controller; */
-			/* interrupt-parent = <&tegra_main_gpio>; */
-			/* interrupts = <TEGRA_MAIN_GPIO(B, 4) IRQ_TYPE_EDGE_BOTH>; */
 		};
 
 		gpio_i2c_8_76: tca9539@76 {
@@ -163,10 +155,6 @@
 			#gpio-cells = <2>;
 			gpio-controller;
 			vcc-supply = <&vdd_1v8_ap>;
-			/* #interrupt-cells = <2>; */
-			/* interrupt-controller; */
-			/* interrupt-parent = <&tegra_main_gpio>; */
-			/* interrupts = <TEGRA_MAIN_GPIO(B, 4) IRQ_TYPE_EDGE_BOTH>; */
 		};
 
 	};

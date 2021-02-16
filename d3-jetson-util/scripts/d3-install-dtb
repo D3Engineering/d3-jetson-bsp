@@ -15,17 +15,25 @@
 # FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
 # more details.
 
+set -o errexit
+set -o pipefail
+shopt -s extglob
+
 [[ -t 0 && -t 1 ]] || { echo "Can't run - not on a terminal" ; exit ; }
 
-shopt -s extglob
-ME="\e[34m[d3-install-dtb]\e[39m"
+function pr() {
+    echo -ne "\e[34m[d3-install-dtb]\e[39m "
+    printf "%s" "$@"
+    echo
+}
+
 ROOT_DTB_DIR="/usr/lib"
 cd $ROOT_DTB_DIR
 
-echo -e "$ME Choose an installed D3 BSP release"
+pr "Choose an installed D3 BSP release"
 select LIMAGE in ./linux-image*; do
     test -n "$LIMAGE" && break
-    echo "$ME Select a valid d3 bsp kernel release"
+    pr "Select a valid d3 bsp kernel release"
 done
 
 DTB_DIR="$ROOT_DTB_DIR/$LIMAGE"
@@ -38,20 +46,30 @@ declare -a DTB_ARR
 
 # Text between 'DESC' markers is the names of the products that each
 # DTB corresponds to
-for file in ./!(tegra*)+(.dtb.encrypt); do
+shopt -s nullglob
+files=(./!(tegra*)+(.dtb.encrypt))
+shopt -u nullglob
+
+if [[ "${#files[@]}" -lt 1 ]]; then
+    echo "No DTB files found in $DTB_DIR" 1>&2
+    exit 1
+fi
+
+for file in "${files[@]}" ; do
     DTB_ARR_RAW+=("$file")
     DTB_ARR+=("$(strings < "$file" | grep -P 'DESC<[^>]+>DESC' \
-	| sed 's/[>]*DESC[<]*//g')")
+       | sed 's/[>]*DESC[<]*//g') ($(sed -E 's/^\.\/|\.encrypt$|_sigheader//g' <<<"$file"))")
 done
 
-echo "Choose a dtb to install"
+pr "Choose a dtb to install"
 select DTB in "${DTB_ARR[@]}"; do
     test -n "$DTB" && break
-    echo "$ME Select a valid signed dtb"
+    pr "Select a valid signed dtb"
 done
 
-if sudo dd if="${DTB_ARR_RAW[$REPLY-1]}" of="/dev/disk/by-partlabel/kernel-dtb"; then
-    echo -e "[d3-install-dtb] \e[32mkernel-dtb has been flashed!\e[39m"
+selected="${DTB_ARR_RAW[$REPLY-1]}"
+if sudo dd if="$selected" of="/dev/disk/by-partlabel/kernel-dtb"; then
+    echo -e "[d3-install-dtb] \e[32mkernel-dtb has been flashed! (file $selected)\e[39m"
 else
-    echo -e "$ME \e[31mdd has failed to write dtb!\e[39m"
+    echo -e "[d3-install-dtb] \e[31mdd has failed to write dtb!\e[39m"
 fi

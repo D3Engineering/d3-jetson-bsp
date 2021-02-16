@@ -1,0 +1,267 @@
+#!/usr/bin/env perl
+# d3-get-mode-info: get camera information for a /dev/videoN node
+# See copyright notice at end
+
+use 5.014;    # for s///r
+use strict;
+use warnings;
+use autodie;
+
+use Getopt::Long 2.33 qw(GetOptionsFromArray
+  :config gnu_getopt auto_version auto_help);
+use IO::Select;
+use IPC::Open3;
+use Pod::Usage;
+use Symbol;
+
+exit main(@ARGV);
+
+############################################################################
+# main
+
+sub main {
+    my $opts;
+    $opts = parse_opts(@_);
+
+    die "Cannot read device `$opts->{d}`" unless -r $opts->{d} && -c _;
+
+    my $camera_props = get_camera_props($opts);
+
+    if ( $opts->{dump} ) {
+        require Data::Dumper;
+        print Data::Dumper->new( [$camera_props], ['Camera_Properties'] )
+          ->Indent(1)->Sortkeys(1)->Dump;
+        return 0;
+    }
+
+    print_requested_props( $opts, $camera_props );
+
+    return 0;
+
+} # sub main
+
+############################################################################
+# High-level helpers
+
+# $opts = parse_opts(@args): returns a hashref based on @args
+sub parse_opts {
+    my %opts = (
+
+        # Inputs
+        d => '/dev/video0',
+        m => 0,
+
+        # Outputs
+        F => "\t",    # Field separator
+        f => [],      # output fields
+    );
+
+    # Parse options
+    GetOptionsFromArray(
+        \@_, \%opts,
+
+        # Inputs
+        'd|device=s',
+        'm|mode=s',
+
+        # Outputs
+        'F|field-separator=s',
+        'dump',
+        'f=s@',
+        'size',
+        'man', 'usage|h',
+    ) or pod2usage(1);
+    pod2usage( -verbose => 2 ) if $opts{man};
+    pod2usage( -verbose => 1, -exitval => 0 ) if $opts{usage};
+
+    $opts{size} = 1 if @{ $opts{f} } == 0;    # Default output fields
+
+    push @{ $opts{f} }, qw(active_w active_h) if $opts{size};
+
+    return \%opts;
+} # sub parse_opts
+
+# $props = get_camera_props($opts): get all the properties of a camera.
+# Properties are named as their device-tree keys, except for special
+# properties starting with '_'.
+sub get_camera_props {
+    my $opts = shift;
+    my %retval;
+    my $ctl = qq(v4l2-ctl -d "$opts->{d}");
+
+    #item Get device node/badge
+    my $card_type = `$ctl -D |grep 'Card type'` // '';
+    die "Could not get card type ($?)" if $?;
+    $retval{_card_type} = $card_type;
+    $retval{_device}    = $opts->{d};
+
+    # Find the badge
+    my ( $devname, $driver, $devaddr, $bus, $addr );
+    unless ( ( $devname, $driver, $devaddr, $bus, $addr ) =
+        ( $card_type =~ m{((\w+)\h+((\d+)-([\da-f]+)))\h*$}i ) )
+    {
+        die "Could not understand card type `$card_type`";
+    }
+
+    @$opts{ "_devname", "_driver", "_devaddr", "_bus", "_addr" } =
+      ( $devname, $driver, $devaddr, $bus, $addr );
+
+    my $devdir = "/sys/bus/i2c/devices/$devaddr";
+    die "Can't find directory $devdir" unless -d $devdir || -l $devdir;
+    $opts->{_devdir} = $devdir;
+
+    # Find the module this corresponds to
+    my $tcp = '/proc/device-tree/tegra-camera-platform/modules';
+    my $dh;
+    opendir( $dh, $tcp );
+    my @modules = sort map { "$tcp/$_" } grep { /module\d/ } readdir $dh;
+    closedir $dh;
+
+    my $moduledir;
+    foreach my $m (@modules) { # NOTE: assume drivernode0 is the imager
+        my $d = "$m/drivernode0/devname";
+        next unless -r $d;
+
+        my $mdev = _slurp($d);
+        next unless $mdev eq $devname;
+
+        $moduledir = $m;    # found it
+        last;
+    } #MODULE
+
+    die "Couldn't find a tegra-camera-platform module for $devname"
+      unless $moduledir;
+    $retval{_moduledir} = $moduledir;
+
+    my $badge = _slurp("$moduledir/badge");
+    $retval{_badge} = $badge;
+
+    # Since NVIDIA requires it, why not use it? ;)
+    my $driverdir = _slurp("$moduledir/drivernode0/proc-device-tree");
+    $retval{_tcp} = $driverdir;
+
+    opendir( $dh, $driverdir );
+    my @mode_dirs = sort map { "$driverdir/$_" } grep { /mode\d/ } readdir $dh;
+    closedir $dh;
+
+    my $got_mode;
+    foreach my $mode_dir (@mode_dirs) {
+        my ($modenum) = $mode_dir =~ m{/mode(\d+)};
+        next unless $modenum == $opts->{m};
+
+        $got_mode         = 1;
+        $retval{_modenum} = $modenum;
+        $retval{_modedir} = $mode_dir;
+
+        fill_properties( \%retval, $mode_dir );
+        last;
+    }
+
+    die "Could not find mode $opts->{m} on device $opts->{d}" unless $got_mode;
+
+    return \%retval;
+} # sub get_camera_props
+
+# fill_properties(\%props, $dir): read everything in $dir into \%retval
+sub fill_properties {
+    my ( $props, $dir ) = @_;
+
+    opendir( my $dh, $dir );
+    my @props = readdir $dh;
+    closedir $dh;
+
+    foreach my $prop (@props) {
+        my $fn = "$dir/$prop";
+        next unless -f $fn;
+        $props->{$prop} = _slurp($fn);
+    }
+} # sub fill_properties
+
+# print_requested_props($opts, $camera_props): produce the output
+sub print_requested_props {
+    my ( $opts, $camera_props ) = @_;
+
+    my $print_sep = 0;    # assume num requested  < maxint
+    for my $prop ( @{ $opts->{f} } ) {
+        print $opts->{F} if $print_sep++;
+        die "Cannot find requested property $prop"
+          unless exists $camera_props->{$prop};
+        print $camera_props->{$prop};
+    }
+
+    say '';               # always end with a newline
+} # sub print_requested_props
+
+############################################################################
+# Low-level workers
+
+# Return the contents of a file, with any trailing whitespace or nulls deleted.
+sub _slurp {
+    my $fn = shift or die('Need a filename');
+    my $data;
+    open my $fh, '<', $fn;
+    $data = do { local $/; <$fh> };
+    close $fh;
+    $data =~ s/[\s\0]+$//;
+
+    return $data;
+} # sub _slurp
+
+############################################################################
+
+__END__
+
+=head1 NAME
+
+d3-get-mode-info - print camera information
+
+=head1 SYNOPSIS
+
+    d3-get-mode-info [options]
+
+Specify B<--usage> for options, or B<--man> for full documentation.
+Trailing nulls and whitespace on values are deleted.
+
+=head1 OPTIONS
+
+=head2 Selecting input
+
+=head3 B<-d>, B<--device> C<filename> (default C</dev/video0>)
+
+Read sensor information from C<filename>, which should be a V4L2 device.
+
+=head3 B<-m>, B<--mode> C<MODE> (default C<0>)
+
+Which sensor mode
+
+=head2 Selecting output
+
+The default is B<--size>.  For a full (non-formatted) list, say C<--dump>.
+
+=head3 B<-F> C<SEP>
+
+Set the output field separator to C<SEP> (default TAB).  The default is tab
+so you can use cut(1) more conveniently.
+
+=head3 B<--dump>
+
+Dump all known properties as a Perl data structure (uses L<Data::Dumper>).
+
+=head3 B<-f> C<FIELD>
+
+Output the value of field C<FIELD>.
+
+=head3 B<--size>
+
+Adds C<active_w> and C<active_h> in that order to the end of the list of fields
+to output.
+
+=head1 AUTHOR
+
+Christopher White, C<cwhite@d3engineering.com>
+
+=head1 COPYRIGHT
+
+Copyright (c) 2020 D3 Engineering, LLC.  All Rights Reserved.
+
+=cut

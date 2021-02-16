@@ -1,0 +1,11 @@
+#!/bin/bash
+# @configure_input@
+
+TARGET="@TARGET_HOST@"
+
+ssh-copy-id @USERNAME_AT@"$TARGET"
+ssh @USERNAME_SSH@ -t "$TARGET" 'sudo apt-get -y update && sudo apt-get install -y rsync'
+make sync-debug
+ssh @USERNAME_SSH@ -t "$TARGET" 'cd debug; sudo ./prep-new-debug-system'
+ssh @USERNAME_SSH@ -t "$TARGET" 'debug/disable-screen-lock'
+ssh @USERNAME_SSH@ -t "$TARGET" 'cd debug; ./build-tm-api'

@@ -20,23 +20,8 @@
 #ifndef _OV10640_H
 #define _OV10640_H
 
+#include <d3/d3-jetson-bsp.h>
 #include <linux/i2c.h>
-
-/**
- * If @p expr evalutes to non-zero assign it to @p err and return @p err
- */
-#define TRY(err, expr) do {\
-		err = expr; \
-		if (err) { \
-			return err; \
-		} \
-	} while (false)
-
-#define TRY_MEM(mem, expr) do {\
-		mem = expr; \
-		if (IS_ERR(mem)) \
-			return PTR_ERR(mem); \
-	} while (false)
 
 struct ov10640
 {
@@ -57,7 +42,7 @@ struct ov10640
 
 	bool group_hold;
 
-	int frame_sync_mode;
+	s32 frame_sync_mode;
 
 	struct i2c_client *deserializer;
 	bool hflip;

@@ -60,13 +60,7 @@
 #define OV10640_DIG_VS_GAIN_H			0x30F0
 
 #define OV10640_REG_READ_MODE                     0x3090
-#define OV10640_REG_READ_MODE_FLIP_MIRROR(x)      ((x) << 2)
-#define OV10640_REG_READ_MODE_FLIP_MIRROR_MASK    (0x0c)
 #define OV10640_REG_R_ISP_CTRL_2                  0x3128
-#define OV10640_REG_R_ISP_CTRL_2_FLIP_MIRROR(x)   ((x) << 0)
-#define OV10640_REG_R_ISP_CTRL_2_FLIP_MIRROR_MASK (0x03)
 #define OV10640_REG_R_CTRL08                      0x3291
-#define OV10640_REG_R_CTRL08_FLIP_MIRROR(x)       ((x) << 1)
-#define OV10640_REG_R_CTRL08_FLIP_MIRROR_MASK     (0x06)
 
 #endif

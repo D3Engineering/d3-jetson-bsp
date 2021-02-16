@@ -21,16 +21,20 @@
 #define CHAN_NODE CONCAT_2(chan_,PORT_IDX)
 #define CSI_IN_NODE CONCAT_2(csi_in_,PORT_IDX)
 #define CSI_OUT_NODE CONCAT_2(csi_out_,PORT_IDX)
-#define CAM_MODULE_NODE CONCAT_2(cam_module, PORT_IDX)
+#define CAM_MODULE_NODE CONCAT_2(cam_module_,PORT_IDX)
+#define CAM_MODULE_NAME CONCAT_2(module,PORT_IDX)
 
-&CAM_MODULE_NODE {
-	position = STR(POSITION);
-	status = STR(STATUS);
-	orientation = STR(ORIENTATION);
-
-        drivernode0 {
-		pcl_id = "v4l2_sensor";
-		status = STR(STATUS);
+&tcp {
+	modules {
+		CAM_MODULE_NODE: CAM_MODULE_NAME {
+			status = STR(STATUS);
+			position = STR(POSITION);
+			orientation = STR(ORIENTATION);
+			drivernode0 {
+				status = STR(STATUS);
+				pcl_id = "v4l2_sensor";
+			};
+		};
 	};
 };
 

@@ -1,0 +1,135 @@
+/*
+ * Copyright (c) 2020, D3 Engineering. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+
+#include "d3-reset-full.dtsi"
+
+/* UB960Q */
+#define DES_NODE ub960_1
+#define DES_PATH /proc/device-tree/i2c@3180000/tca9546@77/i2c@1/ub960@34
+
+&i2c_mux_bus_1 {
+	DES_NODE: ub960@34 {
+		status = "okay";
+		compatible = "d3,ub960";
+		reg = <0x34>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+		iovdd-supply = <&p3668_vdd_1v8_sd>;
+		avdd-supply = <&p3668_vdd_1v8_sd>;
+		pdb-gpios = <&nxc_fg 96 GPIO_ACTIVE_LOW>;
+		csi-lane-count = <4>;
+		csi-tx-speed-mbps = <1600>;
+		csi-continuous-clock = <1>;
+		CONCAT_2(DES_NODE,_link0): link@0 {
+			status = "okay";
+			reg = <0>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+		CONCAT_2(DES_NODE,_link1): link@1 {
+			status = "okay";
+			reg = <1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+		CONCAT_2(DES_NODE,_link2): link@2 {
+			status = "okay";
+			reg = <2>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+		CONCAT_2(DES_NODE,_link3): link@3 {
+			status = "okay";
+			reg = <3>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+	};
+};
+
+/* General ports setup */
+#define STATUS disabled
+#define ORIENTATION 1
+#define TEGRA_SINTERFACE serial_c
+#define EEPROM_ADDR 54
+#define CSI_PORT 2
+#define CSI_LANES 4
+#define IMG_BUS 12
+
+/* Port 0 */
+#include "d3-reset-port.dtsi"
+
+//TODO change enpoints and port_idx back to normal
+/* UB953 */
+#define DES_LINK 0
+#define IMG_ADDR 14
+#define SER_ADDR 44
+/* camera node setup */
+#define PORT_VCID 0
+#define PORT_IDX 4
+#define POSITION PORT_IDX
+#define ENDPOINT_A 8
+#define ENDPOINT_B 9
+#define POC_SUPPLY <&poc4_vdd>
+
+#include "d3-nxc-fpdlink-cameras.dtsi"
+/* Port 1 */
+#include "d3-reset-port.dtsi"
+
+/* UB953 */
+#define DES_LINK 1
+#define IMG_ADDR 15
+#define SER_ADDR 45
+/* camera node setup */
+#define PORT_VCID 1
+#define PORT_IDX 5
+#define POSITION 5
+#define ENDPOINT_A 10
+#define ENDPOINT_B 11
+#define POC_SUPPLY <&poc5_vdd>
+
+#include "d3-nxc-fpdlink-cameras.dtsi"
+
+/* Port 2 */
+#include "d3-reset-port.dtsi"
+
+/* UB953 */
+#define DES_LINK 2
+#define IMG_ADDR 16
+#define SER_ADDR 46
+/* camera node setup */
+#define PORT_VCID 2
+#define PORT_IDX 6
+#define POSITION 6
+#define ENDPOINT_A 12
+#define ENDPOINT_B 13
+#define POC_SUPPLY <&poc6_vdd>
+
+#include "d3-nxc-fpdlink-cameras.dtsi"
+
+/* Port 3 */
+#include "d3-reset-port.dtsi"
+
+/* UB953 */
+#define DES_LINK 3
+#define IMG_ADDR 17
+#define SER_ADDR 47
+/* camera node setup */
+#define PORT_VCID 3
+#define PORT_IDX 7
+#define POSITION 7
+#define ENDPOINT_A 14
+#define ENDPOINT_B 15
+#define POC_SUPPLY <&poc7_vdd>
+
+#include "d3-nxc-fpdlink-cameras.dtsi"

@@ -1,0 +1,22 @@
+#!/bin/bash
+# Enable the I2C trace file.
+# Use this to gain insight into the errors coming from the camera CPU.
+# Thanks to
+# https://riptutorial.com/linux-kernel/example/11983/tracing-i2c-events .
+# Copyright (c) 2019 D3 Engineering, LLC.
+# CC-BY-SA 3.0.
+
+[[ "$UID" != "0" ]] && exec sudo "$0" "$@"
+
+# Shorten the path to the trace log with this fun and useful symlink!
+if [ ! -e ~nvidia/debug/trace ]; then
+    ln -s /sys/kernel/debug/tracing/trace ~nvidia/debug/trace
+fi
+
+cd /sys/kernel/debug/tracing
+echo nop > current_tracer
+echo 1 > events/i2c/enable
+echo 30720 > buffer_size_kb
+echo 1 > tracing_on
+# This resets the trace log
+echo > trace

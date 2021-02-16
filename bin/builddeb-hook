@@ -1,0 +1,178 @@
+#!/bin/bash
+# bin/builddeb-hook: Hook to tweak Debian packages
+#
+# Copyright (c) 2019, D3 Engineering.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+set -eo pipefail
+
+# === Utilities ===
+
+die() {
+    echo "$@" >&2
+    exit 1
+}
+
+# Print command or message depending on $V, then execute.
+# Usage: VV TAG command
+VV() {
+    local tag="$1"
+    shift
+    if [[ $V ]]; then
+        echo "$@" 1>&2
+    else
+        echo "    $tag" 1>&2
+    fi
+    "$@"
+}
+
+# Messages that are only printed if $V (e.g., `make V=1`)
+OUTFD='/dev/null'
+if [[ $V ]]; then
+    OUTFD='/dev/stdout'
+fi
+
+# === Check environment and args ===
+
+[[ $# -eq 2 ]] || die 'Usage: builddeb-hook <pname> <pdir>'
+
+pname="$1"
+pdir="$(realpath "$2")"
+
+if [[ $pname != linux-image-* || $pname = *-dbg ]]; then
+    echo "$0: Nothing to do for $pname - exiting"
+    exit 0
+fi
+
+[[ $KERNELRELEASE ]] || die "KERNELRELEASE is not set"
+[[ $L4TDIR ]] || die "L4TDIR is not set"
+
+echo "$0: Processing $pname in $pdir, kernel release version $KERNELRELEASE"
+
+# DEBUG
+set -x
+declare -p
+
+# === Tweak the kernel package ===
+
+pushd "${pdir}/usr/lib/linux-image-${KERNELRELEASE}"
+
+# Sign the DTBs
+#while IFS='' read -r dtb_name ; do
+for dtb_name in *.dtb ; do
+
+    dtsfn="$(mktemp)"
+
+    # Get the chip ID
+    dtc -I dtb -O dts -o "$dtsfn" "$dtb_name" 2>/dev/null
+
+    type="$(grep -E '^\s+model\b' "$dtsfn" | sed -E 's/^[^"]+"//; s/".*$//')"
+
+    case "$type" in
+        jetson-nano|*TX1*|*Nano*)
+            id='0x21'
+            continue    # tegraflash_internal.py doesn't support TX1
+            ;;          # TODO check TX1 installation of JetPack - maybe
+                        # it does instead.
+        jetson_e)
+            id='0x21'   # I think this is another TX1, but I'm not sure.
+                        # It's the P2595 I/O board, which I've only seen
+                        # used with TX1.
+            continue    # tegraflash_internal.py doesn't support TX1
+            ;;
+
+        quill)
+            id='0x18'   # TX2
+            ;;
+
+        lightning|storm|jetson_cv)
+            id='0x18'   # TX2, I think (lightning, storm = P3489; jetson_cv = P2597)
+            ;;
+
+        *jetson-xavier*|*Jetson-Xavier*|*AGX*|"NVIDIA Jetson Xavier NX Developer Kit")
+            id='0x19'
+            ;;
+
+        *)
+            die "Unknown DTS type $type for DTB $dtb_name"
+            ;;
+
+    esac
+
+    # Modify the DTBs to add the rootfs, following the model of flash.sh (but
+    # not copying code therefrom).
+    # FIRE_HAZARD: If Nvidia changes the partitioning or device assignments,
+    # the hard-coded /dev/mmcblk0p1 in this command may need to change.
+    sed -E -i 's/bootargs\s*=\s*"([^"]*)"/bootargs="\1 root=\/dev\/mmcblk0p1 rw rootwait rootfstype=ext4"/' "$dtsfn"
+    dtc -I dts -O dtb -o "$dtb_name" "$dtsfn"
+    rm -f "$dtsfn"
+
+    # Sign the DTB
+    VV "SIGN_DTB $dtb_name" "${L4TDIR}/bootloader/tegraflash.py" --chip $id --cmd "sign $dtb_name" \
+        --skipuid > "$OUTFD" || die "Could not sign $dtb_name for chip ID $id"
+
+done #foreach *.dtb
+
+popd
+
+kimg="${pdir}/boot/vmlinuz-${KERNELRELEASE}"
+kimg_abs="$(realpath "$kimg")"
+[[ -r $kimg_abs ]] || die "Could not find expected kernel image $kimg_abs"
+
+# Uncompress a compressed the kernel image in place.  This is so U-boot can
+# boot it.  Ref: <https://lists.debian.org/debian-arm/2017/02/msg00016.html>.
+kimg_filetype="$(file -bEi "$kimg")"
+if [[ "$?" -eq 0 && "$kimg_filetype" == application/gzip\;* ]]; then
+    mv "$kimg" "${kimg}.gz" # since `gzip -d` requires a suffix
+    gzip -d "${kimg}.gz"
+fi
+
+# Sign and install the kernel image.  0x19 is the chip id for
+# Xavier. Xavier is the only system we use that needs this.
+
+pushd "${L4TDIR}/bootloader"
+# TODO use the flash.sh config files to get the filename - see
+# comments at mkbootimg in Makefile.am
+VV "MKBOOTIMG ${kimg_abs}.img" ./mkbootimg --kernel "${kimg_abs}" \
+    --ramdisk l4t_initrd.img --board mmcblk01p1 --output "${kimg_abs}.img"
+cd "${pdir}/boot/"
+VV "SIGN_KERNEL ${kimg_abs}.img" "${L4TDIR}/bootloader/tegraflash.py" --chip 0x19 --cmd "sign ${kimg_abs}.img" --skipuid > "$OUTFD"
+popd
+
+# === Add an /etc/kernel/postinst.d script that will dd the kernel. ===
+mkdir -p "${pdir}/etc/kernel/postinst.d"
+pushd "${pdir}/etc/kernel/postinst.d"
+relative_kimg="${kimg_abs#$pdir}"
+
+cat <<EOT > d3-flash-xavier-kernel
+#!/bin/bash
+if grep -s -E '^TEGRA_CHIPID 0x19' /etc/nv_boot_control.conf ; then
+    echo 'Xavier - checking kernel'
+
+    kimage='${relative_kimg}_sigheader.img.encrypt'
+    if [[ ! -r \$kimage ]]; then
+        echo "Cannot read kernel image \$kimage" 1>&2
+        exit 1
+    fi
+
+    echo 'Copying kernel'
+    dd bs=10MB if="\$kimage" of='/dev/disk/by-partlabel/kernel' status=progress \
+        || echo 'Unable to dd kernel!' 1>&2
+fi
+EOT
+
+chown root:root d3-flash-xavier-kernel
+chmod 755 d3-flash-xavier-kernel
+
+popd

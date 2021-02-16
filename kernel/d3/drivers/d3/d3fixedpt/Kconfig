@@ -1,0 +1,12 @@
+config D3_FIXEDPT
+	bool "Fixed-point math (S42.22)"
+	help
+	  A library of S42.22 fixed-point math routines.  No floating-point
+	  functions are used.
+
+config D3_FIXEDPT_STARTUP_TESTS
+	bool "On startup, run some sanity tests"
+	depends on D3_FIXEDPT
+	help
+	  The results of the tests are logged in dmesg.  This option has no
+	  effect on the use of the d3fixedpt routines by other drivers.

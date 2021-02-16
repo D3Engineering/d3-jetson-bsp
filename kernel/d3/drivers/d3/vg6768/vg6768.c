@@ -28,11 +28,6 @@
 
 
 /**
- * If @p expr evalutes to non-zero assign it to @p err and return @p err
- */
-#define TRY(err, expr) if(((err) = (expr))) { return (err); }
-
-/**
  *  16 bit addresses and 8 bit values.
  */
 static struct regmap_config vg6768_regmap_cfg =

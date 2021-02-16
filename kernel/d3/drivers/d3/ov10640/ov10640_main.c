@@ -87,8 +87,7 @@ static int ov10640_camera_write_reg(struct camera_common_data *s_data, u16 addr,
 
 
 /**
- * This is called to start the stream. Currently this doesn't really
- * do anything other than log start/stop.
+ * This is called to start the stream.
  *
  * @param sd sub device
  * @param enable enable/disable stream
@@ -97,13 +96,43 @@ static int ov10640_camera_write_reg(struct camera_common_data *s_data, u16 addr,
  */
 static int ov10640_s_stream(struct v4l2_subdev *sd, int enable)
 {
-	struct i2c_client *client = v4l2_get_subdevdata(sd);
-	struct camera_common_data *s_data = to_camera_common_data(&client->dev);
-	struct ov10640 *self = (struct ov10640 *)s_data->priv;
-	struct i2c_client *parent_client;
-	int mode_ix = self->s_data->sensor_mode_id;
-	int is_hdr = ov10640_formats[mode_ix].hdr_en;
+	struct i2c_client *client = NULL;
+	struct camera_common_data *s_data = NULL;
+	struct ov10640 *self = NULL;
+	int mode_ix = 0;
+	bool is_hdr = false;
+	struct i2c_client *parent_client = NULL;
+
+	client = v4l2_get_subdevdata(sd);
+	if (!client) {
+		pr_err("no i2c client");
+		return -EINVAL;
+	}
+	s_data = to_camera_common_data(&client->dev);
+	if (!s_data) {
+		dev_err(&client->dev, "no camera_common_data");
+		return -EINVAL;
+	}
+	self = s_data->priv;
+	if (!self) {
+		dev_err(&client->dev, "no private data pinter");
+		return -EINVAL;
+	}
+	mode_ix = self->s_data->sensor_mode_id;
+	if ((mode_ix < 0)
+	    || (mode_ix >= ov10640_formats_len)) {
+		dev_err(self->dev, "mode_ix out of range, saw %d expected 0-%zu",
+			mode_ix, ov10640_formats_len);
+		return -EINVAL;
+	}
+	is_hdr = ov10640_formats[mode_ix].hdr_en;
+
 	parent_client = of_find_i2c_device_by_node(client->dev.of_node->parent);
+	if (!parent_client) {
+		dev_err(self->dev, "could not find serializer node");
+		return -EINVAL;
+	}
+
 
 	dev_dbg(self->dev, "mode: %d %s %s",
 		mode_ix,
@@ -116,22 +145,23 @@ static int ov10640_s_stream(struct v4l2_subdev *sd, int enable)
 
 
 	if (enable) {
-		/* configure the sensor */
-		/* regmap_write(self->map, OV10640_REG_SOFTWARE_CTRL2, */
-		/* 	     OV10640_REG_SOFTWARE_CTRL2_RESET); */
 		regmap_multi_reg_write(
 			self->map,
 			mode_table[mode_ix].reg_sequence,
 			mode_table[mode_ix].size);
 		ov10640_hflip_set(self, self->hflip);
 		ov10640_vflip_set(self, self->vflip);
-		regmap_update_bits(self->map,
-				   OV10640_REG_SENSOR_CTRL,
-				   OV10640_REG_SENSOR_CTRL_FSIN_EN_MASK,
-				   OV10640_REG_SENSOR_CTRL_FSIN_EN(self->frame_sync_mode));
+		regmap_update_bits(
+			self->map,
+			OV10640_REG_SENSOR_CTRL,
+			OV10640_REG_SENSOR_CTRL_FSIN_EN_MASK,
+			OV10640_REG_SENSOR_CTRL_FSIN_EN(self->frame_sync_mode));
 
 		regmap_multi_reg_write(self->map, mode_stream, mode_stream_len);
+
 		if (self->frame_sync_mode) {
+			/* It was tested above that parent_client is
+			 * valid if frame_sync is enabled. */
 			ub953_set_frame_sync_enable(&parent_client->dev, true);
 		}
 	} else {
@@ -213,9 +243,7 @@ static int ov10640_camera_power_on(struct camera_common_data *s_data)
 	struct ov10640 *priv = (struct ov10640 *)s_data->priv;
 	struct camera_common_power_rail *pw = &priv->power;
 	pw->state = SWITCH_ON;
-	
 	return 0;
-
 }
 
 static int ov10640_camera_power_off(struct camera_common_data *s_data)

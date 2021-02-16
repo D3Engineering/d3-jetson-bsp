@@ -1,0 +1,80 @@
+#!/bin/bash
+
+# Do not automatically sudo, since this shouldn't be run casually.
+if [[ "$UID" != "0" ]]; then
+    echo 'Root access is required.'
+    exit 1
+fi
+
+boot()
+{
+    echo 'Changing owner of /boot and /lib'
+    chown -R nvidia:nvidia /boot /lib
+
+    # make nvlibs directory writable
+    chmod -R a+w /usr/lib/aarch64-linux-gnu/tegra/
+
+    local ext_conf='/boot/extlinux/extlinux.conf'
+    if ! [ -e "$ext_conf" ]; then
+        echo "$ext_conf does not exist, skipping"
+        return
+    fi
+
+    echo 'Copying extlinux.conf'
+    cp ~nvidia/debug/extlinux.conf "$ext_conf"
+    cp /boot/Image /boot/Image-nvidia
+    chmod a-w /boot/Image-nvidia
+}
+
+sudoers()
+{
+    echo 'Copying sudoers'
+    cp sudoers /etc/sudoers
+    chmod 440 /etc/sudoers
+}
+
+utils()
+{
+    echo 'Installing utilities'
+    apt-get update
+
+    # Essential.  Note that perl and curses are probably already installed
+    # with the base system, but we are listing them here just to be sure.
+    apt-get install --assume-yes \
+        device-tree-compiler \
+        emacs-nox \
+        i2c-tools \
+        libcurses-ui-perl \
+        libdata-hexdumper-perl \
+        libencode-locale-perl \
+        libfile-find-object-rule-perl \
+        libipc-system-simple-perl \
+        perl \
+        perl-doc \
+        rsync \
+        tree \
+        v4l-utils
+
+    # Recommended
+    apt-get install --assume-yes --ignore-missing \
+        ack \
+        build-essential \
+        cmake \
+        devscripts \
+        expect \
+        libexpat1-dev \
+        libgstreamer1.0-dev \
+        libgtk-3-dev \
+        libjpeg-dev \
+        libx11-dev \
+        mplayer \
+        pkg-config \
+        silversearcher-ag \
+        strace \
+        vlc \
+        xxd
+}
+
+boot
+sudoers
+utils

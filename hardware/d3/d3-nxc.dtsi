@@ -1,0 +1,132 @@
+/*
+ * Copyright (c) 2020, D3 Engineering.	All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+
+#include "../nvidia/platform/t19x/jakku/tegra194-p3668-all-p3509-0000.dts"
+
+/ {
+	i2c@c240000 {
+		nxc_fg: nxc-fpga-gpio@20 {
+			compatible = "d3,nxc-fpga-gpio";
+			status = "okay";
+			reg = <0x20>;
+			reset-gpio = <&tegra_main_gpio TEGRA194_MAIN_GPIO(S,0) GPIO_ACTIVE_LOW>;
+			gpio-controller;
+			#gpio-cells = <2>;
+		};
+	};
+
+	i2c@3160000 {
+		nxc_eeprom: microchip-24fc512@57 {
+			compatible = "24c512";
+			statis = "okay";
+			reg = <0x57>;
+		};
+	};
+
+	i2c@31e0000 {
+		/* FPGA LCMX02 Programming Interface (U42) */
+		machxo2-programming-interface@40 {
+			compatible = "machxo2-i2c-flash";
+			status = "okay";
+			reg = <0x40>;
+
+			/* Flash memory sizes in units of 16-byte pages.
+			Found in MachX02ProgrammingAndConfigurationUsageGuide.pdf,
+			Advanced Configuration Information / Flash Programming */
+			section-size-config = <5758>;
+			section-size-ufm = <767>;
+			section-erase-time-config = <3100>;
+			section-erase-time-ufm = <1000>;
+			trefresh-time = <3>;
+		};
+	};
+
+	i2c@3180000 {
+		tca9546@77 {
+			status = "okay";
+			compatible = "nxp,pca9546";
+			reg = <0x77>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			vcc-supply = <&p3509_vdd_1v8_cvb>;
+			vcc-pullup-supply = <&p3509_vdd_1v8_cvb>;
+
+			i2c_mux_bus_0: i2c@0 {
+				status = "okay";
+				reg = <0>;
+				#address-cells = <1>;
+				#size-cells = <0>;
+				i2c-mux,deselect-on-exit;
+
+			};
+
+			i2c_mux_bus_1: i2c@1 {
+				status = "okay";
+				reg = <1>;
+				#address-cells = <1>;
+				#size-cells = <0>;
+				i2c-mux,deselect-on-exit;
+			};
+
+			i2c_mux_bus_2: i2c@2 {
+				status = "okay";
+				reg = <2>;
+				#address-cells = <1>;
+				#size-cells = <0>;
+				i2c-mux,deselect-on-exit;
+			};
+
+			i2c_mux_bus_3: i2c@3 {
+				status = "okay";
+				reg = <3>;
+				#address-cells = <1>;
+				#size-cells = <0>;
+				i2c-mux,deselect-on-exit;
+			};
+		};
+	};
+	host1x {
+		vi_base: vi@15c10000 {
+			status = "okay";
+			vi_ports: ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				/* ports will be included here */
+			};
+		};
+
+		csi_base: nvcsi@15a00000 {
+			status = "okay";
+			/* channels will be included here */
+		};
+	};
+
+	camera_platform: tegra-camera-platform {
+		num_csi_lanes = <12>;
+		max_lane_speed = <1500000>;
+	};
+};
+
+/* Disable hdmi output. Yes, sor1 is on head0 */
+
+&head0 {
+	status = "disabled";
+};
+
+&sor1_hdmi_display {
+	status = "disabled";
+};
+
+&sor1 {
+	status = "disabled";
+};

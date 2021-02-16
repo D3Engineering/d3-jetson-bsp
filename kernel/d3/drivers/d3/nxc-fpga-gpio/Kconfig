@@ -1,0 +1,4 @@
+config D3_NXC_FPGA_GPIO
+	bool "NXC FPGA GPIO Controller"
+	help
+	  D3 GPIO control for the D3 NX Carrier board.

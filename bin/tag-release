@@ -15,7 +15,7 @@ TAG_NAME="$1"
 MSG_FILE=$(readlink -f "$2")
 
 git tag -a -s -F "$MSG_FILE" "$TAG_NAME"
-git submodule foreach "git tag -a -s -F \"$MSG_FILE\" \"$TAG_NAME\""
+git submodule foreach --recursive "git tag -a -s -F \"$MSG_FILE\" \"$TAG_NAME\""
 
 git push --tags
-git submodule foreach 'git push --tags'
+git submodule foreach --recursive 'git push --tags'

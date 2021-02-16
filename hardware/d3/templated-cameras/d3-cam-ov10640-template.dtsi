@@ -91,7 +91,7 @@
 		};
 
 		/* 3 exposure HDR mode  */
-#if D3_OV10640_HDR_ENABLE
+#ifdef D3_OV10640_HDR_ENABLE
 		mode1 {
 			OV10640_MODE_COMMON;
 			mode_type = "bayer_wdr_pwl";

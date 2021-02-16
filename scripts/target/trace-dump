@@ -1,0 +1,11 @@
+#!/bin/bash
+# Dump the nvidia trace file to stdout
+
+[[ "$UID" != "0" ]] && exec sudo "$0" "$@"
+
+# Shorten the path to the trace log with this fun and useful symlink!
+if [ ! -e ~nvidia/debug/trace ]; then
+    ln -s /sys/kernel/debug/tracing/trace ~nvidia/debug/trace
+fi
+
+cat ~nvidia/debug/trace

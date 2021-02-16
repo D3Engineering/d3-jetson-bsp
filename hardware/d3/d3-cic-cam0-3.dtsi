@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, D3 Engineering. All rights reserved.
+ * Copyright (c) 2019-2020, D3 Engineering. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -38,7 +38,7 @@
 #define SER_ADDR 40
 #define IMG_ADDR 60
 
-#include "d3-cic-cameras.dtsi"
+#include "d3-cic-cameras-fpdlink.dtsi"
 
 /* Port 1 */
 #include "d3-reset-port.dtsi"
@@ -52,7 +52,7 @@
 #define SER_ADDR 41
 #define IMG_ADDR 61
 
-#include "d3-cic-cameras.dtsi"
+#include "d3-cic-cameras-fpdlink.dtsi"
 
 
 /* Port 2 */
@@ -67,7 +67,7 @@
 #define SER_ADDR 42
 #define IMG_ADDR 62
 
-#include "d3-cic-cameras.dtsi"
+#include "d3-cic-cameras-fpdlink.dtsi"
 
 
 /* Port 3 */
@@ -82,4 +82,4 @@
 #define SER_ADDR 43
 #define IMG_ADDR 63
 
-#include "d3-cic-cameras.dtsi"
+#include "d3-cic-cameras-fpdlink.dtsi"

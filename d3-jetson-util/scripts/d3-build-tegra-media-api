@@ -4,8 +4,15 @@
 #
 
 SRC_DIR_ARRAY=( \
-    '/usr/src/jetson_multimedia_api'    # JP 4.3
+    '/usr/src/jetson_multimedia_api'    # JP 4.3 and future
     '/usr/src/tegra_multimedia_api'     # JP 4.2.X
+)
+
+declare -A JMM_API_VERSION_ARRAY=( \
+    ["32.3.1"]="32.3.1-20191209225816"  # JP 4.3
+    ["32.4.2"]="32.4.2-20200408182620"  # JP 4.4 EA
+    ["32.4.3"]="32.4.3-20200625213407"  # JP 4.4
+    ["32.4.4"]="32.4.4-20201016123640"  # JP 4.4.1
 )
 
 DEST_DIR="$HOME/jetson_multimedia_api"
@@ -14,6 +21,20 @@ unset SRC_DIR
 
 set -o errexit
 set -o pipefail
+
+get_manual_jmm_api_version()
+{
+    L4T_VER="$(perl -ne '/R([\d\.]+).*?REVISION: ([\d\.]+)/ and print("$1.$2\n"), exit' /etc/nv_tegra_release)"
+    JMM_API_VERSION="${JMM_API_VERSION_ARRAY["$L4T_VER"]}"
+    if [[ ! -n "$JMM_API_VERSION" ]] ; then
+	    out="Warning: Target Tegra Multi Media API version is unknown for\n"
+	    out+="         this L4T version. Will continue without explicit\n"
+	    out+="         versioning! (This can break other packages)"
+	    read -r -s -p "$(echo -e "$out \nPress enter to continue (ctrl-c to cancel)")"
+	    return # returns without echoing a version
+    fi
+    echo "=$JMM_API_VERSION"
+}
 
 find_src()
 {
@@ -41,6 +62,13 @@ check_src()
     fi
 }
 
+# This function attempts to run the Jetpack 4.4 patch script that resolves
+# argus camera segfaults on Jetpack 4.4
+attempt_jp44_patch()
+{
+    sudo d3-patch-jp-44-jmm-api 2>&1 > /dev/null || true
+}
+
 install_deps()
 {
     sudo apt-get -y install \
@@ -52,7 +80,9 @@ install_deps()
      libexpat1-dev \
      libjpeg-dev \
      libgstreamer1.0-dev \
-     gcc-6
+     gcc-6 \
+     libv4l-dev \
+     nvidia-l4t-jetson-multimedia-api"$(get_manual_jmm_api_version)"
 }
 
 copy_src()
@@ -83,9 +113,10 @@ build()
     popd
 }
 
+install_deps
 find_src
 check_src
-install_deps
+attempt_jp44_patch
 copy_src
 perf_max
 build

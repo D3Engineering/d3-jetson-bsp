@@ -262,6 +262,6 @@
 };
 
 #include "d3-cic-cam0-3.dtsi"
-#include "d3-cic-cam4.dtsi"
+#include "d3-cic-cam4-5.dtsi"
 
 #include "d3-config-eeprom.dtsi"

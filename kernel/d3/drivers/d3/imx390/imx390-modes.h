@@ -27,6 +27,9 @@
 #include "imx390-mode-1936x1100-SP1L.h"
 #include "imx390-mode-1936x1100-SP1H.h"
 #include "imx390-mode-1936x1100-SP2.h"
+#include "imx390-mode-1936x1100-SP1L-2LANE.h"
+#include "imx390-mode-1936x1100-SP1H-2LANE.h"
+#include "imx390-mode-1936x1100-SP2-2LANE.h"
 
 
 enum imx390_mode {
@@ -48,6 +51,9 @@ struct imx390_modes_map {
 
 extern struct imx390_modes_map imx390_modes_map[];
 extern const size_t imx390_modes_map_len;
+
+extern struct imx390_modes_map imx390_2lane_modes_map[];
+extern const size_t imx390_2lane_modes_map_len;
 
 extern const struct camera_common_frmfmt imx390_modes_formats[];
 extern const size_t imx390_modes_formats_len;

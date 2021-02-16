@@ -25,30 +25,6 @@
 #include <d3/d3-jetson-bsp.h>
 
 /**
- * If @p expr evalutes to non-zero assign it to @p err and return @p err
- */
-#define TRY(err, expr) do {\
-		err = expr; \
-		if (err) { \
-			return err; \
-		} \
-	} while (false)
-
-#define TRY_MUTEX(mutex, err, expr) do {\
-		err = expr; \
-		if (err) { \
-			mutex_unlock(mutex); \
-			return err; \
-		} \
-	} while (false)
-
-#define TRY_MEM(mem, expr) do {\
-		mem = expr; \
-		if (IS_ERR(mem)) \
-			return PTR_ERR(mem); \
-	} while (false)
-
-/**
  * Symbolic register names (see datasheet)
  */
 enum {

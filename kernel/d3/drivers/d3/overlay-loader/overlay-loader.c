@@ -605,14 +605,11 @@ static int get_dt_parameters(struct kparam_element **input_k_elem,
 static int get_config_eeprom_parameters(struct kparam_element **input_k_elem)
 {
 	struct config_eeprom_data *data;
-	static bool already_reported = false;
 	*input_k_elem = NULL;
 
 	data = config_eeprom_get_data();
 	if(!data) {
-		if(!already_reported)
-			pr_info(MODULE_NAME ": No config-eeprom data");
-		already_reported = true;
+		pr_info_once(MODULE_NAME ": No config-eeprom data");
 		return -ENODEV;
 	}
 

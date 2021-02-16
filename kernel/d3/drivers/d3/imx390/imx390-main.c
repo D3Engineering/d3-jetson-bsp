@@ -29,14 +29,6 @@
 
 
 /**
- * If @p expr evalutes to non-zero assign it to @p err and return @p err
- */
-#define TRY(err, expr) if(((err) = (expr))) { return (err); }
-
-
-
-
-/**
  * Register addresses (see data sheet/register map)
  */
 enum {
@@ -260,14 +252,25 @@ static int imx390_mode_set(struct imx390 *self, enum imx390_mode mode)
 	int err = 0;
 	struct imx390_modes_map *pmode = NULL;
 
-	if ((mode < 0)
-	    || (mode > IMX390_MODE_ENDMARKER)) {
+	if ((mode < 0) || (mode > IMX390_MODE_ENDMARKER)) {
 		dev_err(self->dev, "invalid mode %d (0-4)", mode);
 		return -EINVAL;
 	}
-	pmode = &imx390_modes_map[mode];
-	dev_info(self->dev, "setting mode: %s\n", pmode->desc);
-	TRY(err, regmap_multi_reg_write(self->map, pmode->vals, *pmode->n_vals));
+	if (self->s_data->numlanes == 2) {
+#ifdef CONFIG_D3_IMX390_HDR_ENABLE
+		if (mode == IMX390_MODE_HDR) {
+			dev_err(self->dev, "2 lane HDR NOT IMPLEMENTED!");
+		}
+#endif	/* CONFIG_D3_IMX390_HDR_ENABLE */
+		pmode = &imx390_2lane_modes_map[mode];
+		dev_info(self->dev, "setting mode: %s\n", pmode->desc);
+		TRY(err, regmap_multi_reg_write(self->map, pmode->vals, *pmode->n_vals));
+	}
+	else {
+		pmode = &imx390_modes_map[mode];
+		dev_info(self->dev, "setting mode: %s\n", pmode->desc);
+		TRY(err, regmap_multi_reg_write(self->map, pmode->vals, *pmode->n_vals));
+	}
 	return 0;
 }
 
@@ -409,8 +412,8 @@ static int imx390_power_off(struct camera_common_data *s_data)
  * @return 0 on success
  */
 static int imx390_set_fmt(struct v4l2_subdev *sd,
-                          struct v4l2_subdev_pad_config *cfg,
-                          struct v4l2_subdev_format *format)
+			  struct v4l2_subdev_pad_config *cfg,
+			  struct v4l2_subdev_format *format)
 {
 	/* struct camera_common_data *s_data = to_camera_common_data(sd->dev); */
 	int err = 0;
@@ -435,18 +438,18 @@ static int imx390_set_fmt(struct v4l2_subdev *sd,
  * @return
  */
 static int imx390_get_fmt(struct v4l2_subdev *sd,
-                          struct v4l2_subdev_pad_config *cfg,
-                          struct v4l2_subdev_format *format)
+			  struct v4l2_subdev_pad_config *cfg,
+			  struct v4l2_subdev_format *format)
 {
 	return camera_common_g_fmt(sd, &format->format);
 }
 
 
 static struct v4l2_subdev_pad_ops imx390_subdev_pad_ops = {
-	.set_fmt	     = imx390_set_fmt,
-	.get_fmt	     = imx390_get_fmt,
-	.enum_mbus_code	     = camera_common_enum_mbus_code,
-	.enum_frame_size     = camera_common_enum_framesizes,
+	.set_fmt		 = imx390_set_fmt,
+	.get_fmt		 = imx390_get_fmt,
+	.enum_mbus_code		 = camera_common_enum_mbus_code,
+	.enum_frame_size	 = camera_common_enum_framesizes,
 	.enum_frame_interval = camera_common_enum_frameintervals,
 };
 
@@ -509,9 +512,9 @@ static int imx390_ctrls_init(struct imx390 *self)
 	self->ctrls[ctrl_index++] = ctrl;
 
 	for (custom_index = 0;
-	     custom_index < NUM_CUSTOM_CONTROLS;
-	     custom_index++) {
-
+		 custom_index < NUM_CUSTOM_CONTROLS;
+		 custom_index++)
+	{
 		ctrl = v4l2_ctrl_new_custom(&self->ctrl_handler,
 					    &ctrl_config_list[custom_index],
 					    NULL);
@@ -523,7 +526,7 @@ static int imx390_ctrls_init(struct imx390 *self)
 		}
 
 		if (ctrl_config_list[custom_index].type == V4L2_CTRL_TYPE_STRING &&
-		    ctrl_config_list[custom_index].flags & V4L2_CTRL_FLAG_READ_ONLY)
+			ctrl_config_list[custom_index].flags & V4L2_CTRL_FLAG_READ_ONLY)
 		{
 			/* @todo should use imx390_kzalloc */
 			ctrl->p_new.p_char = devm_kzalloc(
@@ -920,8 +923,8 @@ static int imx390_kzalloc(struct device *dev, size_t len, void *out)
  * @return 0 on success
  */
 static int imx390_regmap_init(struct i2c_client *client,
-                              struct regmap_config *cfg,
-                              struct regmap **out_map)
+			      struct regmap_config *cfg,
+			      struct regmap **out_map)
 {
 	if (!(*out_map = devm_regmap_init_i2c(client, cfg))) {
 		dev_err(&client->dev, "regmap_init failed");
@@ -983,7 +986,7 @@ static int imx390_deserializer_parse(struct imx390 *self,
 
 	deserializer_node = of_parse_phandle(node, "deserializer", 0);
 	if (!deserializer_node) {
-		dev_dbg(self->dev, "could not find deserializer node");
+		dev_dbg(self->dev, "optional deserializer node is not present");
 		return -ENOENT;
 	}
 
@@ -992,7 +995,7 @@ static int imx390_deserializer_parse(struct imx390 *self,
 	deserializer_node = NULL;
 
 	if (!deserializer_client) {
-		dev_dbg(self->dev, "missing deserializer client");
+		dev_dbg(self->dev, "optional deserializer client is not present");
 		return -ENOENT;
 	}
 
@@ -1031,15 +1034,14 @@ static struct camera_common_pdata *imx390_parse_dt(
 					sizeof(*board_priv_pdata), GFP_KERNEL);
 
 	err = of_property_read_string(node, "mclk",
-				      &board_priv_pdata->mclk_name);
+					  &board_priv_pdata->mclk_name);
 	if (err)
 		dev_warn(self->dev, "mclk not in DT");
 
-	if (imx390_deserializer_parse(self, &self->deserializer) == 0) {
+	self->deserializer = NULL;
+	imx390_deserializer_parse(self, &self->deserializer);
+	if (self->deserializer) {
 		dev_dbg(self->dev, "deserializer present");
-	}
-	else {
-		self->deserializer = NULL;
 	}
 
 	return board_priv_pdata;
@@ -1087,7 +1089,7 @@ static int imx390_media_init(struct imx390 *self)
  * @return 0 on success
  */
 static int imx390_probe(struct i2c_client *client,
-                        const struct i2c_device_id *id)
+			const struct i2c_device_id *id)
 {
 	int err = 0;
 	struct camera_common_data *common_data;
@@ -1115,7 +1117,7 @@ static int imx390_probe(struct i2c_client *client,
 	common_data->ops = &imx390_common_ops;
 	common_data->ctrl_handler = &self->ctrl_handler;
 	common_data->dev = &client->dev;
-	common_data->frmfmt = &imx390_modes_formats[0];
+
 	common_data->colorfmt =
 		camera_common_find_datafmt(MEDIA_BUS_FMT_SRGGB12_1X12);
 
@@ -1138,6 +1140,7 @@ static int imx390_probe(struct i2c_client *client,
 	/* common_data->mode = ; */
 	/* common_data->mode_prop_idx; */
 
+	common_data->frmfmt = &imx390_modes_formats[0];
 	common_data->numfmts = imx390_modes_formats_len;
 	dev_dbg(self->dev, "num fmts %d", common_data->numfmts);
 	common_data->def_mode = IMX390_MODE_DEFAULT;
@@ -1149,7 +1152,6 @@ static int imx390_probe(struct i2c_client *client,
 	common_data->def_clk_freq = 1485000;
 	common_data->fmt_width = common_data->def_width;
 	common_data->fmt_height = common_data->def_height;
-
 	self->s_data = common_data;
 	self->subdev = &common_data->subdev;
 	self->subdev->dev = self->dev;
@@ -1163,6 +1165,7 @@ static int imx390_probe(struct i2c_client *client,
 	TRY(err, imx390_regmap_init(self->client,
 				    &imx390_regmap_cfg,
 				    &self->map));
+
 	TRY(err, imx390_revision_report(self));
 
 	TRY(err, camera_common_initialize(common_data, "imx390"));

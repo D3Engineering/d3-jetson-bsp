@@ -1,0 +1,8 @@
+menu "Library routines (D3)"
+
+config LIB_CAMERA_REGISTER_ACCESS
+	bool "Routines to streamline access to camera registers"
+	help
+	  Includes cam_rw and reg_ctl.
+
+endmenu

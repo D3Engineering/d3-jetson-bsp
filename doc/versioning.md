@@ -12,14 +12,35 @@ apply to you.
 Versions are in `MAJOR.MINOR.PATCH` format.  Each time one component is
 incremented, any components below it are set to `0`.
 
+For clarity:
+
+- branches are entirely lowercase (e.g, `d3/master`).
+- tags are entirely uppercase (e.g., `D3/RELEASE/2.0.0`, `D3/RELEASE/1-ALPHA`)
+
 ## Semantic Versioning
 
 We do **not** use [Semantic Versioning] ("SemVer") due to specific
 requirements of our use cases.  However, version numbers are formatted
 and compared according to the lexical conventions of SemVer v2.0.0,
-specification items [2], [9], [10], and [11].  For example, a release
-candidate has a pre-release version number such as `2.0.0-rc`.
+specification items [2], [9], [10], and [11].
+
 The full BNF for version numbers is at [SemVer BNF].
+
+## Pre-releases
+
+Each release candidate or other pre-release has a pre-release version
+number such as `2.0.0-pre.1`.  Each pre-release version includes at
+least one alpha component, since all-numerics (e.g., `3.0.0-1`) can be
+confused with the Debian version numbers of full releases.
+
+All pre-release versions use _lowercase_ letters --- no uppercase
+letters.  This is to comply with make-kpkg(1)'s requirements for
+`EXTRAVERSION`.
+
+Tags for prereleases match the version but in uppercase, e.g.,
+`D3/RELEASE/2.0.0-PRE.1`.  This is to conform with D3 conventions for
+tags.  Since prerelease versions do not use uppercase letters, there is
+a one-to-one mapping between tags and prerelease versions.
 
 ## `d3/` branches
 
@@ -42,8 +63,8 @@ in the statement of work.
 
 # Copyright
 
-Copyright (c) 2019 D3 Engineering, LLC.  All rights reserved.  This file
-may be copied and distributed as part of the D3 Jetson BSP.
+Copyright (c) 2019--2020 D3 Engineering, LLC.  All rights reserved.
+This file may be copied and distributed as part of the D3 Jetson BSP.
 
 [GitHub]: https://github.com/D3Engineering/d3-jetson-bsp
 [Linux for Tegra]: https://developer.nvidia.com/embedded/linux-tegra

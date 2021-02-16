@@ -535,33 +535,26 @@ $endif$
 \item\relax\color{blockquote-text}\ignorespaces}{\unskip\unskip\endlist\end{customblockquote}}
 
 %
-% Source Sans Pro as the de­fault font fam­ily
-% Source Code Pro for monospace text
+% Courier as the default font package
 %
-% 'default' option sets the default
-% font family to Source Sans Pro, not \sfdefault.
 %
 $if(mainfont)$
 $else$
-\usepackage[default]{sourcesanspro}
-\usepackage{sourcecodepro}
+\usepackage{courier}
 
 % XeLaTeX specific adjustments for straight quotes: https://tex.stackexchange.com/a/354887
-% This issue is already fixed (see https://github.com/silkeh/latex-sourcecodepro/pull/5) but the
-% fix is still unreleased.
-% TODO: Remove this workaround when the new version of sourcecodepro is released on CTAN.
 \ifxetex
 \makeatletter
 \defaultfontfeatures[\ttfamily]
-  { Numbers   = \sourcecodepro@figurestyle,
-    Scale     = \SourceCodePro@scale,
+  { Numbers   = \courier@figurestyle,
+    Scale     = \courier@scale,
     Extension = .otf }
 \setmonofont
-  [ UprightFont    = *-\sourcecodepro@regstyle,
-    ItalicFont     = *-\sourcecodepro@regstyle It,
-    BoldFont       = *-\sourcecodepro@boldstyle,
-    BoldItalicFont = *-\sourcecodepro@boldstyle It ]
-  {SourceCodePro}
+  [ UprightFont    = *-\courier@regstyle,
+    ItalicFont     = *-\courier@regstyle It,
+    BoldFont       = *-\courier@boldstyle,
+    BoldItalicFont = *-\courier@boldstyle It ]
+  {courier}
 \makeatother
 \fi
 $endif$
@@ -642,7 +635,7 @@ $if(listings)$
 \definecolor{listing-background}{HTML}{F7F7F7}
 \definecolor{listing-rule}{HTML}{B3B2B3}
 \definecolor{listing-numbers}{HTML}{B3B2B3}
-\definecolor{listing-text-color}{HTML}{435489}
+\definecolor{listing-text-color}{HTML}{000000}
 \definecolor{listing-keyword}{HTML}{435489}
 \definecolor{listing-identifier}{HTML}{435489}
 \definecolor{listing-string}{HTML}{00999A}
@@ -650,7 +643,7 @@ $if(listings)$
 \definecolor{listing-javadoc-comment}{HTML}{006CA9}
 
 \lstdefinestyle{eisvogel_listing_style}{
-  language         = bash,
+  language         = java,
 $if(listings-disable-line-numbers)$
   xleftmargin      = 0.6em,
   framexleftmargin = 0.4em,

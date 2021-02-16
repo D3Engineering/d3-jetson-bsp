@@ -23,16 +23,6 @@
 
 #include <d3/d3-jetson-bsp.h>
 
-/**
- * If @p expr evalutes to non-zero assign it to @p err and return @p err
- */
-#define TRY(err, expr) do {\
-		err = expr; \
-		if (err) { \
-			return err; \
-		} \
-	} while (false)
-
 static const int ub960tp_30fps[] = {
 	30,
 };

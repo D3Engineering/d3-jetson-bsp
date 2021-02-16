@@ -2,12 +2,12 @@
 
 # Remove symlinks created in postinst
 cd /var/nvidia/nvcam/settings/
-for p in $(perl -E 'say foreach 0..9, "A".."F"'); do
+for p in {0..9} {A..F}; do
     TARGET_OV10640="d3_${p}_ov10640.isp"
     TARGET_IMX390="d3_${p}_imx390.isp"
     TARGET_IMX390RCM="d3_${p}_imx390rcm.isp"
 
-    rm -f "$TARGET_OV10640" "$TARGET_IMX390" "$TARGET_IMX390RCM" 
+    rm -f "$TARGET_OV10640" "$TARGET_IMX390" "$TARGET_IMX390RCM"
 done
 
 

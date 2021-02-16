@@ -15,6 +15,9 @@
 #define CSI_PORT 0
 #define STATUS disabled
 #define TEGRA_SINTERFACE serial_a
+/* Using CSI_PORT as POSITION is acceptable as long as CSI_PORT is smaller
+than 10. If CSI_PORT is greater than 10, uppercase letters should be used.
+e.g. 8, 9, A, B, C, etc... */
 #define POSITION CSI_PORT
 #define ORIENTATION 1
 #define IOVDD_SUPPLY <&vdd_1v8_ap>

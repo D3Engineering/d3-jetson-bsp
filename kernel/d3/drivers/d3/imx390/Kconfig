@@ -1,4 +1,5 @@
 config D3_IMX390
+	depends on OF
 	tristate "IMX390 Camera Driver"
 	help
 	  D3 IMX390 Camera Driver for Nvidia Tegra systems.
@@ -6,4 +7,4 @@ config D3_IMX390_HDR_ENABLE
     bool "IMX390 HDR Mode"
     depends on D3_IMX390
     help
-      Enable HDR mode for D3 imx390 driver
+      Enable HDR mode for D3 IMX390 driver

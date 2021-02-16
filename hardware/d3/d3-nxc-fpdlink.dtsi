@@ -1,0 +1,209 @@
+/*
+ * Copyright (c) 2020, D3 Engineering.	All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+
+#include "d3-nxc.dtsi"
+
+&camera_platform {
+	num_csi_lanes = <12>;
+};
+
+&vi_base {
+	num-channels = <12>;
+};
+
+&csi_base {
+	num-channels = <12>;
+};
+
+/{
+	fixed-regulators {
+		m2m_vdd: regulator@400 {
+			status = "okay";
+			reg = <0x190>;
+			regulator-name = "m2m_vdd";
+			compatible = "regulator-fixed";
+			regulator-always-on;
+			gpio = <&nxc_fg 131 GPIO_ACTIVE_LOW>;
+			enable-active-high;
+
+		};
+		m2e_vdd: regulator@401 {
+			status = "okay";
+			reg = <0x191>;
+			regulator-name = "m2e_vdd";
+			compatible = "regulator-fixed";
+			regulator-always-on;
+			gpio = <&nxc_fg 133 GPIO_ACTIVE_LOW>;
+			enable-active-high;
+
+		};
+		i2c_mux_rst: regulator@402 {
+			status = "okay";
+			reg = <0x192>;
+			regulator-name = "i2c_mux_rst";
+			compatible = "regulator-fixed";
+			regulator-always-on;
+			gpio = <&nxc_fg 20 GPIO_ACTIVE_LOW>;
+			enable-active-high;
+
+		};
+		dp_vdd: regulator@404 {
+			status = "okay";
+			reg = <0x194>;
+			regulator-name = "dp_vdd";
+			compatible = "regulator-fixed";
+			regulator-always-on;
+			gpio = <&nxc_fg 36 GPIO_ACTIVE_LOW>;
+			enable-active-high;
+
+		};
+		/* This GPIO is passed through BUF_IO_3 to control the USB
+		 * Hub as per the rework on rev 2.1 boards */
+		usb_hub_vdd: regulator@405 {
+			status = "okay";
+			reg = <0x195>;
+			regulator-name = "usb_hub_vdd";
+			compatible = "regulator-fixed";
+			regulator-always-on;
+			gpio = <&tegra_main_gpio TEGRA194_MAIN_GPIO(R,0) GPIO_ACTIVE_LOW>;
+			enable-active-high;
+		};
+		/* This GPIO is passed though to USB VDD on rev 3+ boards*/
+		usb_hub_vdd_rev3: regulator@406 {
+			status = "okay";
+			reg = <0x196>;
+			regulator-name = "usb_hub_vdd_rev3";
+			compatible = "regulator-fixed";
+			regulator-always-on;
+			gpio = <&tegra_main_gpio TEGRA194_MAIN_GPIO(C,2) GPIO_ACTIVE_LOW>;
+			enable-active-high;
+		};
+		usb_rst: regulator@500 {
+			status = "okay";
+			reg = <0x1F4>;
+			regulator-name = "usb_rst";
+			compatible = "regulator-fixed";
+			regulator-always-on;
+			gpio = <&tegra_main_gpio TEGRA194_MAIN_GPIO(Q,1) GPIO_ACTIVE_LOW>;
+			enable-active-high;
+		};
+		poc0_vdd: regulator@410 {
+			status = "okay";
+			reg = <0x19a>;
+			regulator-name = "poc0_vdd";
+			compatible = "regulator-fixed";
+			regulator-always-on;
+			gpio = <&nxc_fg 58 GPIO_ACTIVE_LOW>;
+			enable-active-high;
+		};
+		poc1_vdd: regulator@411 {
+			status = "okay";
+			reg = <0x19b>;
+			regulator-name = "poc1_vdd";
+			compatible = "regulator-fixed";
+			regulator-always-on;
+			gpio = <&nxc_fg 59 GPIO_ACTIVE_LOW>;
+			enable-active-high;
+		};
+		poc2_vdd: regulator@412 {
+			status = "okay";
+			reg = <0x19c>;
+			regulator-name = "poc2_vdd";
+			compatible = "regulator-fixed";
+			regulator-always-on;
+			gpio = <&nxc_fg 60 GPIO_ACTIVE_LOW>;
+			enable-active-high;
+		};
+		poc3_vdd: regulator@413 {
+			status = "okay";
+			reg = <0x19d>;
+			regulator-name = "poc3_vdd";
+			compatible = "regulator-fixed";
+			regulator-always-on;
+			gpio = <&nxc_fg 61 GPIO_ACTIVE_LOW>;
+			enable-active-high;
+		};
+		poc4_vdd: regulator@414 {
+			status = "okay";
+			reg = <0x19e>;
+			regulator-name = "poc4_vdd";
+			compatible = "regulator-fixed";
+			regulator-always-on;
+			gpio = <&nxc_fg 62 GPIO_ACTIVE_LOW>;
+			enable-active-high;
+		};
+		poc5_vdd: regulator@415 {
+			status = "okay";
+			reg = <0x19f>;
+			regulator-name = "poc5_vdd";
+			compatible = "regulator-fixed";
+			regulator-always-on;
+			gpio = <&nxc_fg 63 GPIO_ACTIVE_LOW>;
+			enable-active-high;
+		};
+		poc6_vdd: regulator@416 {
+			status = "okay";
+			reg = <0x1a0>;
+			regulator-name = "poc6_vdd";
+			compatible = "regulator-fixed";
+			regulator-always-on;
+			gpio = <&nxc_fg 64 GPIO_ACTIVE_LOW>;
+			enable-active-high;
+		};
+		poc7_vdd: regulator@417 {
+			status = "okay";
+			reg = <0x1a1>;
+			regulator-name = "poc7_vdd";
+			compatible = "regulator-fixed";
+			regulator-always-on;
+			gpio = <&nxc_fg 65 GPIO_ACTIVE_LOW>;
+			enable-active-high;
+		};
+		poc8_vdd: regulator@418 {
+			status = "okay";
+			reg = <0x1a2>;
+			regulator-name = "poc8_vdd";
+			compatible = "regulator-fixed";
+			regulator-always-on;
+			gpio = <&nxc_fg 66 GPIO_ACTIVE_LOW>;
+			enable-active-high;
+		};
+		poc9_vdd: regulator@419 {
+			status = "okay";
+			reg = <0x1a3>;
+			regulator-name = "poc9_vdd";
+			compatible = "regulator-fixed";
+			regulator-always-on;
+			gpio = <&nxc_fg 67 GPIO_ACTIVE_LOW>;
+			enable-active-high;
+		};
+		poc10_vdd: regulator@420 {
+			status = "okay";
+			reg = <0x1a4>;
+			regulator-name = "poc10_vdd";
+			compatible = "regulator-fixed";
+			regulator-always-on;
+			gpio = <&nxc_fg 68 GPIO_ACTIVE_LOW>;
+			enable-active-high;
+		};
+		poc11_vdd: regulator@421 {
+			status = "okay";
+			reg = <0x1a5>;
+			regulator-name = "poc11_vdd";
+			compatible = "regulator-fixed";
+			regulator-always-on;
+			gpio = <&nxc_fg 69 GPIO_ACTIVE_LOW>;
+			enable-active-high;
+		};
+	};
+};

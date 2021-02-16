@@ -1,4 +1,8 @@
 # -*-makefile-*-
+
+# Get directory containing this file.  Must be the first thing in the file.
+here := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
+
 obj-$(CONFIG_D3_EARLY_AT24) += early-at24-generated.o
 
 # We are copying and modifying the kernel's at24.c.
@@ -6,7 +10,7 @@ orig_at24 = $(srctree)/drivers/misc/eeprom/at24.c
 modified_at24 = $(obj)/early-at24-generated.c
 
 # The script that makes the modifications
-sed_script = $(srctree)/$(src)/modify-at24.sed
+sed_script = $(here)/modify-at24.sed
 
 # How to make the generated file
 quiet_cmd_early_at24 = CONVERT $@

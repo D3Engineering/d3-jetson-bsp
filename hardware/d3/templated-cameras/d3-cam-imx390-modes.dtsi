@@ -68,7 +68,7 @@ mode2 {
 
 
 /* HDR */
-#if D3_IMX390_HDR_ENABLE
+#ifdef D3_IMX390_HDR_ENABLE
 mode3 {
 	IMX390_COMMON;
 	mode_type = "bayer_wdr_pwl";

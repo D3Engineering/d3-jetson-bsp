@@ -19,3 +19,4 @@
 #undef ENDPOINT_B
 #undef SER_ADDR
 #undef IMG_ADDR
+#undef POC_SUPPLY
