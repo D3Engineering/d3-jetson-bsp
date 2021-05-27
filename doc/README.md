@@ -52,25 +52,6 @@ response `nvidia`.
 	sudo apt-get install ack build-essential cmake libexpat1-dev libgstreamer1.0-dev libgtk-3-dev libjpeg-dev libx11-dev mplayer pkg-config silversearcher-ag strace tree vlc
 	```
 
-## Set up OS support on the target
-
-Make sure the target is connected to USB and has booted up.
-Then, on the **host**, run `bin/prep-new-system-from-host`.  This will:
-
-* Update OS packages
-* Install required packages (such as rsync)
-* Update `/etc/sudoers` to permit `ssh 192.168.55.1 sudo ...` invocations
-* Turn off screen lock
-* Copy helper scripts from `./debug` on the host to `~/nvidia/debug`
-on the target
-
-This also creates a backup of the default Nvidia kernel, which may be useful
-to you if you happen to "brick" your system.
-
-**NOTE**: Only run `bin/prep-new-system-from-host` _once_ on any particular
-board.  At present, a subsequent run will overwrite the backup of the default
-kernel with the latest kernel, whatever that may be.
-
 ## Set up development environment
 
 The BSP uses an Automake `configure`-based workflow.  The `configure` script
@@ -87,7 +68,8 @@ configure the build for a Xavier board using an OV10640 camera via a D3
 	./configure --with-system-type=xavier --with-dtb='build/deploy/boot/d3-xavier-2xocto-ov10640.dtb'
 	```
 
-	You must specify all of the following options:
+	You may specify following options. When possible sensible defaults
+    are chosen:
 
 	* `--with-system-type`: `tx2`, `xavier`, or `nano`. This defaults to
 	`tx2` and influences other defaults like the `--with-l4t` option.
@@ -103,6 +85,27 @@ configure the build for a Xavier board using an OV10640 camera via a D3
 	during build. A list of D3 DTBs can be found in
 	`/hardware/d3/Makefile`.
 
+
+## Set up OS support on the target
+
+Make sure the target is connected to USB and has booted up.  Then, on
+the **host**, run `bin/prep-new-system-from-host`.  This scripts is
+generated when configure is run. If the script isn't present then you
+must run `configure`. This script will:
+
+* Update OS packages
+* Install required packages (such as rsync)
+* Update `/etc/sudoers` to permit `ssh 192.168.55.1 sudo ...` invocations
+* Turn off screen lock
+* Copy helper scripts from `./debug` on the host to `~/nvidia/debug`
+on the target
+
+This also creates a backup of the default Nvidia kernel, which may be useful
+to you if you happen to "brick" your system.
+
+**NOTE**: Only run `bin/prep-new-system-from-host` _once_ on any particular
+board.  At present, a subsequent run will overwrite the backup of the default
+kernel with the latest kernel, whatever that may be.
 
 ## Build the kernel and device tree
 
