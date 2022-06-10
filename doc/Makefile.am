@@ -7,8 +7,8 @@ doc_DATA = $(RNOTES) $(NXBUP)
 .PHONY: always_rebuild
 
 doc_deps = \
-	img/d3_logo.png img/d3-cic-key-points.png \
-	img/d3-2xocto-key-points.png img/sdk-installer.png \
+	img/d3_logo.png img/d3-6x-serdes-key-points.png \
+	img/d3-xavier-16x-fpdlink-key-points.png img/sdk-installer.png \
 	d3-style.latex
 
 nx_doc_deps = \

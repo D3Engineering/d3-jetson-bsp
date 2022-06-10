@@ -1,16 +1,10 @@
 #!/bin/bash
-# d3-select-cameras-boot.sh
 #
-# Copyright (C) 2020 D3 Engineering <thart@d3engineering.com>
-
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; version 2 of the License.
+# A TUI for managing active camera overlays on an Nvidia Jetson running
+# the D3 Engineering BSP.
+# Author: Tyler Hart <thart@d3engineering.com>
 #
-# This program is distributed in the hope that it will be useful, but WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
-# more details.
+# Copyright (c) 2020, D3 Engineering
 
 DEBUG=
 
@@ -317,8 +311,9 @@ function extlinux_conf_import {
 	ext_str="$(grep -m 1 -oP "active_overlays=\\K[^ ]*" "$EXTLINUX_CONF_PATH")"
 	ret=$?
 	if [[ $ret -ne 0 ]]; then
-		pr_err "No \"active_overlays\" element in $EXTLINUX_CONF_PATH! Make sure d3-jetson-util has been installed."
-		exit 1
+		pr_err "Appending active overlays to $EXTLINUX_CONF_PATH"
+                sed -i 's/rootfstype=ext4/rootfstype=ext4 active_overlays=/1' \
+			/boot/extlinux/extlinux.conf
 	fi
 	populate_active_overlays "$ext_str"
 }

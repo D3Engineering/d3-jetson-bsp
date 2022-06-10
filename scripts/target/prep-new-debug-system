@@ -8,8 +8,9 @@ fi
 
 boot()
 {
-    echo 'Changing owner of /boot and /lib'
-    chown -R nvidia:nvidia /boot /lib
+    echo 'Changing owner of /boot, /lib, and /var/nvidia/nvcam/settings'
+    chown -R nvidia:nvidia /boot /lib /var/nvidia/nvcam/settings
+
 
     # make nvlibs directory writable
     chmod -R a+w /usr/lib/aarch64-linux-gnu/tegra/
@@ -24,6 +25,12 @@ boot()
     cp ~nvidia/debug/extlinux.conf "$ext_conf"
     cp /boot/Image /boot/Image-nvidia
     chmod a-w /boot/Image-nvidia
+
+    # This is intentionally a move and not a copy. A signature
+    # mismatch can trigger a bug in cboot. It is safer to ensure that
+    # this file will not match a developer kernel Image file.
+    mv /boot/Image.sig /boot/Image-nvidia.sig
+
 }
 
 sudoers()

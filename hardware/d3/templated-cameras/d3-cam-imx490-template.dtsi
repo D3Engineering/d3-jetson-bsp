@@ -1,0 +1,89 @@
+/*
+ * Copyright (c) 2018-2021, D3 Engineering. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+
+#include "d3-reset-cam.dtsi"
+#include "d3-check-cam.dtsi"
+
+#define CAM_MODEL imx490gmsl
+#define DRIVER_NAME imx490
+
+#define CAM_NODE CONCAT_3(CAM_MODEL,_,PORT_IDX)
+#define CAM_NODE_NAME CONCAT_3(CAM_MODEL,@,IMG_ADDR)
+#define SEN_OUT_NODE CONCAT_2(sen_out_,CAM_NODE)
+
+#define SEN_PATH CONCAT_3(SER_PATH,/link@0/,CAM_NODE_NAME)
+
+
+&DES_LINK_NODE {
+	SER_NODE: SER_NODE_NAME {
+		compatible = "maxim,max9295";
+		status = "okay";
+		reg = <HEX_PREFIX(SER_ADDR)>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+		#gpio-cells = <2>;
+		physical-addr = <HEX_PREFIX(INIT_SER_ADDR)>;
+		gmsl-bit-rates = <6000 187>;
+		csi-lane-count = <4>;
+		gpio-controller;
+		/* poc-supply = POC_SUPPLY; */
+		link@0 {
+			reg = <0>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			bus-number = <IMG_BUS>;
+			CAM_NODE: CAM_NODE_NAME {
+				status = "okay";
+				compatible = "d3,imx490";
+				reg = <HEX_PREFIX(IMG_ADDR)>;
+				devnode = STR(CONCAT_2(video,PORT_IDX));
+				mclk = "extperiph1";
+				physical_w = "5.37";
+				physical_h = "4.04";
+				sensor_model = "imx490";
+				use_decibel_gain = "true";
+				physical-addr = <HEX_PREFIX(INIT_IMG_ADDR)>;
+				reset_gpio = <&SER_NODE 0 GPIO_ACTIVE_LOW>;
+
+#				include "d3-cam-imx490-modes.dtsi"
+				ports {
+					status = STR(STATUS);
+					#address-cells = <1>;
+					#size-cells = <0>;
+					port@0 {
+						reg = <0>;
+						SEN_OUT_NODE: endpoint {
+							status = "okay";
+							port-index = <CSI_PORT>;
+							bus-width = <CSI_LANES>;
+							remote-endpoint = <&CSI_IN_NODE>;
+							vc-id = <PORT_VCID>;
+						};
+					};
+				};
+			};
+		};
+	};
+};
+
+&CAM_MODULE_NODE {
+	badge = STR(CONCAT_4(d3_,POSITION,_,CAM_MODEL));
+	drivernode0 {
+		devname = STR(JOIN_2(DRIVER_NAME,CONCAT_3(IMG_BUS,-00,IMG_ADDR)));
+		proc-device-tree = STR(SEN_PATH);
+	};
+};
+
+&CSI_IN_NODE {
+	remote-endpoint = <&SEN_OUT_NODE>;
+};

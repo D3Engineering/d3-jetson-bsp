@@ -477,7 +477,7 @@
 	mttcan@c310000 {
 		/delete-property/ gpio_can_stb;
 		/delete-property/ gpio_can_en;
-		/* Nvidia suggests that we don't use the pin D16 as GPIO
+		/* NVIDIA suggests that we don't use the pin D16 as GPIO
 		 * https://devtalk.nvidia.com/default/topic/1022844/d16-ao_dmic_in_dat-pin-in-tx2-as-gpio/?offset=3
 		 */
 		gpio_can_stb = <&tegra_aon_gpio TEGRA_AON_GPIO(AA, 4) GPIO_ACTIVE_LOW>;

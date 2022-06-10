@@ -15,6 +15,7 @@
 #define CSI_PORT 5
 #define STATUS disabled
 #define TEGRA_SINTERFACE serial_f
+#define VI_INPUT_STREAM 5
 #define POSITION CSI_PORT
 #define ORIENTATION 1
 #define IOVDD_SUPPLY <&vdd_1v8_ap>
@@ -47,7 +48,6 @@
 #	include "templated-cameras/d3-cam-ov10640-template.dtsi"
 #	include "templated-cameras/d3-cam-imx390-template.dtsi"
 #	include "templated-cameras/d3-cam-imx390rcm-template.dtsi"
-#	include "templated-cameras/d3-cam-vg6768-template.dtsi"
 #	include "templated-cameras/d3-cam-ar0820-fpdlink-template.dtsi"
 #endif
 

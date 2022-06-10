@@ -35,6 +35,7 @@
 #undef RESET_PIN
 #undef STATUS
 #undef TEGRA_SINTERFACE
+#undef VI_INPUT_STREAM
 #undef ENDPOINT_A
 #undef ENDPOINT_B
 #undef POSITION

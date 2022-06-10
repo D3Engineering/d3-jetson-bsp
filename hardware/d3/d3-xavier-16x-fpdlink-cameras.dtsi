@@ -1,0 +1,159 @@
+/*
+ * Copyright (c) 2018-2021, D3 Engineering.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+
+/* Additional camera modules to support up to 16 cameras see
+ * tegra194-p2822-camera-modules.dtsi*/
+/ {
+  tcp: tegra-camera-platform {
+		  compatible = "nvidia, tegra-camera-platform";
+		  modules {
+
+			  /* The cam_module0 node below is taken from
+			   * NVIDIA's DTS. It is shown here as a
+			   * refernce. NVIDIA defines cam_module0 to
+			   * cam_module5 but we need up to 16
+			   * cameras. Historically we modified the DTS
+			   * in the NVIDIA submodule but it is better
+			   * to keep our changes outside of the
+			   * submodule.  */
+
+			  /* cam_module0: module0 { */
+			  /* 		status = "disabled"; */
+			  /* 	cam_module0_drivernode0: drivernode0 { */
+			  /* 			status = "disabled"; */
+			  /* 		}; */
+			  /* 	cam_module0_drivernode1: drivernode1 { */
+			  /* 			status = "disabled"; */
+			  /* 			pcl_id = "v4l2_lens"; */
+			  /* 		}; */
+			  /* 	}; */
+
+		  cam_module6: module6 {
+				  status = "disabled";
+			  cam_module6_drivernode0: drivernode0 {
+					  status = "disabled";
+				  };
+			  cam_module6_drivernode1: drivernode1 {
+					  status = "disabled";
+					  pcl_id = "v4l2_lens";
+				  };
+			  };
+		  cam_module7: module7 {
+				  status = "disabled";
+			  cam_module7_drivernode0: drivernode0 {
+					  status = "disabled";
+				  };
+			  cam_module7_drivernode1: drivernode1 {
+					  status = "disabled";
+					  pcl_id = "v4l2_lens";
+				  };
+			  };
+		  cam_module8: module8 {
+				  status = "disabled";
+			  cam_module8_drivernode0: drivernode0 {
+					  status = "disabled";
+				  };
+			  cam_module8_drivernode1: drivernode1 {
+					  status = "disabled";
+					  pcl_id = "v4l2_lens";
+				  };
+			  };
+		  cam_module9: module9 {
+				  status = "disabled";
+			  cam_module9_drivernode0: drivernode0 {
+					  status = "disabled";
+				  };
+			  cam_module9_drivernode1: drivernode1 {
+					  status = "disabled";
+					  pcl_id = "v4l2_lens";
+				  };
+			  };
+		  cam_module10: module10 {
+				  status = "disabled";
+			  cam_module10_drivernode0: drivernode0 {
+					  status = "disabled";
+				  };
+			  cam_module10_drivernode1: drivernode1 {
+					  status = "disabled";
+					  pcl_id = "v4l2_lens";
+				  };
+			  };
+		  cam_module11: module11 {
+				  status = "disabled";
+			  cam_module11_drivernode0: drivernode0 {
+					  status = "disabled";
+				  };
+			  cam_module11_drivernode1: drivernode1 {
+					  status = "disabled";
+					  pcl_id = "v4l2_lens";
+				  };
+			  };
+		  cam_module12: module12 {
+				  status = "disabled";
+			  cam_module12_drivernode0: drivernode0 {
+					  status = "disabled";
+				  };
+			  cam_module12_drivernode1: drivernode1 {
+					  status = "disabled";
+					  pcl_id = "v4l2_lens";
+				  };
+			  };
+		  cam_module13: module13 {
+				  status = "disabled";
+			  cam_module13_drivernode0: drivernode0 {
+					  status = "disabled";
+				  };
+			  cam_module13_drivernode1: drivernode1 {
+					  status = "disabled";
+					  pcl_id = "v4l2_lens";
+				  };
+			  };
+		  cam_module14: module14 {
+				  status = "disabled";
+			  cam_module14_drivernode0: drivernode0 {
+					  status = "disabled";
+				  };
+			  cam_module14_drivernode1: drivernode1 {
+					  status = "disabled";
+					  pcl_id = "v4l2_lens";
+				  };
+			  };
+		  cam_module15: module15 {
+				  status = "disabled";
+			  cam_module15_drivernode0: drivernode0 {
+					  status = "disabled";
+				  };
+			  cam_module15_drivernode1: drivernode1 {
+					  status = "disabled";
+					  pcl_id = "v4l2_lens";
+				  };
+			  };
+		  };
+	  };
+};
+
+/* UB953 */
+#include "templated-serializers/d3-ser-ub953-template.dtsi"
+
+/* Possible Cams*/
+#include "d3-tegra-nvcsi.dtsi"
+#include "templated-cameras/d3-cam-ov10640-template.dtsi"
+#include "templated-cameras/d3-cam-imx390-template.dtsi"
+#include "templated-cameras/d3-cam-imx390rcm-template.dtsi"
+#include "templated-cameras/d3-cam-imx390cmf-template.dtsi"
+#include "templated-cameras/d3-cam-imx490fpd-template.dtsi"
+
+// TODO: This camera works, but adding support for it puts the DTB file over
+// the maximum size of 512 KB.
+// #include "templated-cameras/d3-cam-ar0820-fpdlink-template.dtsi"
+

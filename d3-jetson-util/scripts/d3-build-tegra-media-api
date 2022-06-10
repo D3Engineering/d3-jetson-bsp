@@ -1,7 +1,10 @@
 #!/bin/bash
 #
-# Copyright (c) 2019-2020, D3 Engineering.  All rights reserved.
+# A utility to download, build, and install the Tegra Multi Media API
+# on Nvidia Jetson platforms.
 #
+# Copyright (c) 2019-2020, D3 Engineering.  All rights reserved.
+
 
 SRC_DIR_ARRAY=( \
     '/usr/src/jetson_multimedia_api'    # JP 4.3 and future

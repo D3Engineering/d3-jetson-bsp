@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, D3 Engineering  All rights reserved.
+ * Copyright (c) 2019-2021, D3 Engineering  All rights reserved.
  * Author: Christopher White <cwhite@d3engineering.com>
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -36,7 +36,7 @@
 
 // EEPROMs I know of:
 // RSP: ST M24512, 64KByte
-// CIC: 24AA1026, 128KByte
+// 6x Serdes Interface Card: 24AA1026, 128KByte
 
 static struct config_eeprom_data *curr_data = NULL;
 

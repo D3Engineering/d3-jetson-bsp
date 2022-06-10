@@ -23,12 +23,24 @@ suppress_unless_v = $(suppress_unless_v_@AM_V@)
 suppress_unless_v_ = $(suppress_unless_v_@AM_DEFAULT_V@)
 suppress_unless_v_0 = > /dev/null
 
+# For finishing backslash-continued lists cleanly
+EOL =
+
 LINUX_BUILD_CONFIG=@LINUX_BUILD_PATH@/.config
 D3_DEFAULT_CONFIG=kernel/d3/d3_defconfig
 linux_ZIMAGE=@LINUX_BUILD_PATH@/arch/arm64/boot/zImage
 linux_IMAGE=@LINUX_BUILD_PATH@/arch/arm64/boot/Image
 linux_SIGNED_IMAGE=@DEPLOY_BUILD_PATH@/boot/boot_sigheader.img.encrypt
-LINUX_PACKAGE_FILE=linux-image-4.9.140+@D3_JETSON_BSP_VERSION@-@CUSTOMER@+_1_arm64.deb
+
+
+PDIR="@TOP_BUILD_PATH@"
+LVERS=@D3_JETSON_BSP_VERSION@-@CUSTOMER@
+LINUX_PACKAGE_FILES=\
+	$(PDIR)/linux-firmware-image-@D3_LINUX_KERNEL_TRIPLET@+$(LVERS)+_1_arm64.deb \
+	$(PDIR)/linux-headers-@D3_LINUX_KERNEL_TRIPLET@+$(LVERS)+_1_arm64.deb \
+	$(PDIR)/linux-image-@D3_LINUX_KERNEL_TRIPLET@+$(LVERS)+_1_arm64.deb \
+	$(PDIR)/linux-libc-dev_1_arm64.deb
+
 BIN_RELEASE_DIR=d3-jetson-bsp-bin-@VERSION_NAME@
 BIN_RELEASE_FILE=@DEPLOY_BUILD_PATH@/d3-jetson-bsp-bin-@VERSION_NAME@.tar.gz
 SRC_RELEASE_FILE=@DEPLOY_BUILD_PATH@/d3-jetson-bsp-src-@VERSION_NAME@.tar.gz
@@ -36,7 +48,7 @@ ZIP_RELEASE_FILE=artifacts/d3-jetson-bsp-@VERSION_NAME@.zip
 ZIP_RELEASE_STAGING_DIR=d3-jetson-bsp-@VERSION_NAME@
 RELNOTES_PDF_FILE=doc/D3-Jetson-BSP-Release-Notes.pdf
 NXCBUP_PDF_FILE=doc/D3-Jetson-NX-Carrier-Bringup.pdf
-RSYNC_OPTS=-ar --exclude=.git --no-owner --no-group $(if $V,--progress)
+RSYNC_OPTS=-ar -H --exclude=.git --no-owner --no-group $(if $V,--progress)
 # Filename of the deb for d3-jetson-util.  Cannot be changed
 UTIL_PACKAGE_FILE=d3-jetson-util_@VERSION_NAME@-1_arm64.deb
 HASH_FILE=d3-jetson-bsp-bin-@VERSION_NAME@.sha1
@@ -54,14 +66,14 @@ SIGNED_DTB=$(DEPLOY_BUILD_PATH)/boot/$(patsubst %.dtb,%_sigheader.dtb.encrypt,$(
 # Chip ID passed into Tegra flash tools when signing DTB
 if XAVIER
 FLASH_CHIP_ID=0x19
-SYNC_TARGETS=sync-modules sync-boot sync-logo sync-nvlibs sync-debug sync-dtb sync-kernel
+SYNC_TARGETS=sync-modules sync-boot sync-logo sync-nvlibs sync-debug sync-kernel
 else
 if NX
 FLASH_CHIP_ID=0x19
-SYNC_TARGETS=sync-modules sync-boot sync-logo sync-nvlibs sync-debug sync-dtb
+SYNC_TARGETS=sync-modules sync-boot sync-logo sync-nvlibs sync-debug
 else
 FLASH_CHIP_ID=0x18
-SYNC_TARGETS=sync-modules sync-boot sync-logo sync-nvlibs sync-debug sync-dtb
+SYNC_TARGETS=sync-modules sync-boot sync-logo sync-nvlibs sync-debug
 endif
 endif
 
@@ -83,11 +95,17 @@ endif
  endif
 export D3_JETSON_BSP_BUILDID
 
+ ifeq ($(origin D3_JETSON_BSP_COMMIT_HASH), undefined)
+ $(eval D3_JETSON_BSP_COMMIT_HASH := $(shell bin/git-hash-get || echo "bin/git-hash-get error"))
+ $(warning ---------------- Commit Hash is $(D3_JETSON_BSP_COMMIT_HASH))
+ endif
+export D3_JETSON_BSP_COMMIT_HASH
+
 D3_IMX390_HDR_ENABLE := $(shell if [ $$(@KERNEL_DIR@/scripts/config --file $(LINUX_BUILD_PATH)/.config -s d3_imx390_hdr_enable) == 'y' ]; then echo 1; else echo 0; fi)
 D3_OV10640_HDR_ENABLE := $(shell if [ $$(@KERNEL_DIR@/scripts/config --file $(LINUX_BUILD_PATH)/.config -s d3_ov10640_hdr_enable) == 'y' ]; then echo 1; else echo 0; fi)
 
 # These flags are passed to cpp when building the dtb
-export D3_DTCCPP_FLAGS=-DD3_JETSON_BSP_BUILDID='"$(D3_JETSON_BSP_BUILDID)"' -DD3_IMX390_HDR_ENABLE=$(D3_IMX390_HDR_ENABLE) -DD3_OV10640_HDR_ENABLE=$(D3_OV10640_HDR_ENABLE)
+export D3_DTCCPP_FLAGS=-DD3_JETSON_BSP_COMMIT_HASH='"$(D3_JETSON_BSP_COMMIT_HASH)"' -DD3_JETSON_BSP_BUILDID='"$(D3_JETSON_BSP_BUILDID)"' -DD3_IMX390_HDR_ENABLE=$(D3_IMX390_HDR_ENABLE) -DD3_OV10640_HDR_ENABLE=$(D3_OV10640_HDR_ENABLE)
 
 # Make all of the directories we need exist.
 $(shell  mkdir -p "$(BIN_RELEASE_DIR)/doc" "$(BIN_RELEASE_DIR)/dtb" "@DEPLOY_BUILD_PATH@" "@LINUX_BUILD_PATH@" "@DEPLOY_BUILD_PATH@/boot" @ARTIFACT_PATH@ "@TOP_BUILD_PATH@/$(ZIP_RELEASE_STAGING_DIR)")
@@ -104,7 +122,7 @@ $(shell  mkdir -p "$(BIN_RELEASE_DIR)/doc" "$(BIN_RELEASE_DIR)/dtb" "@DEPLOY_BUI
 
 # distribution files: listed as phony so we don't have to
 # expressly track their prerequisites.
-.PHONY: $(UTIL_PACKAGE_FILE) $(BIN_RELEASE_FILE) $(LINUX_PACKAGE_FILE)
+.PHONY: $(UTIL_PACKAGE_FILE) $(BIN_RELEASE_FILE) $(LINUX_PACKAGE_FILES)
 .PHONY: $(SRC_RELEASE_FILE)
 
 
@@ -165,13 +183,17 @@ d3-jetson-util: $(UTIL_PACKAGE_FILE)
 $(BIN_RELEASE_FILE): kernel-bindeb-pkg doc d3-jetson-util
 	$(AM_V_GEN)
 	$(vecho) "ID      $(D3_JETSON_BSP_BUILDID)"
+	$(vecho) "HASH      $(D3_JETSON_COMMIT_HASH)"
+	$(vecho) "CP      Supplemental"
+	$(v)cp -rp supplemental/ "$(BIN_RELEASE_DIR)"/supplemental
+	$(v)rm -f "$(BIN_RELEASE_DIR)"/supplemental/install-example.in
 	$(vecho) "CP      PDFs"
 	$(v)cp "$(RELNOTES_PDF_FILE)" "$(BIN_RELEASE_DIR)"/doc/
 	$(v)cp "$(NXCBUP_PDF_FILE)" "$(BIN_RELEASE_DIR)"/doc/
 	$(vecho) "CP      DTBs"
 	$(v)find @LINUX_BUILD_PATH@/arch/ -type f | grep -P '^((?!\/tegra[^\/]*).)*.dtb$$' | xargs -I @ cp '@' "$(BIN_RELEASE_DIR)"/dtb/
 	$(vecho) "CP      kernel package"
-	$(v)cp "@TOP_BUILD_PATH@/$(LINUX_PACKAGE_FILE)" "$(BIN_RELEASE_DIR)"/
+	$(v)cp $(LINUX_PACKAGE_FILES) "$(BIN_RELEASE_DIR)"/
 	$(vecho) "GEN     $(HASH_FILE)"
 	$(v)find "$(BIN_RELEASE_DIR)" -type f -exec sha1sum {} ';' >> "$(HASH_FILE)"
 	$(v)mv "$(HASH_FILE)" "$(BIN_RELEASE_DIR)"
@@ -187,7 +209,6 @@ $(SRC_RELEASE_FILE):
 	--verbose \
 	--format tar.gz \
 	--prefix d3-jetson-bsp-src-@VERSION_NAME@/ \
-	--tree-ish $(GIT_BRANCH) \
 	$(SRC_RELEASE_FILE)
 	$(vecho) '[$@] complete'
 release-src: $(SRC_RELEASE_FILE)
@@ -239,19 +260,24 @@ linux-menuconfig:
 linux-clean:
 	$(v)+$(KCONFIG_ASSIGNMENT) $(MAKE) @LINUX_ARGS@ clean
 
+# Common args we use in both _compile_kernel and kernel-bindeb-pkg
+basic_kernel_compilation_args = \
+	@LINUX_ARGS@ \
+	CFLAGS_build-id.o="-DD3_JETSON_BSP_BUILDID='\"$(D3_JETSON_BSP_BUILDID)\"' -DD3_JETSON_BSP_COMMIT_HASH='\"$(D3_JETSON_BSP_COMMIT_HASH)\"' -DD3_JETSON_BSP_VERSION_NAME='\"$(VERSION_NAME)\"'" \
+	$(EOL)
 
 # Just compile the kernel.  Provided for use by Makefiles in /mk .
 _compile_kernel:
-	$(v)+$(KCONFIG_ASSIGNMENT) $(MAKE) @LINUX_ARGS@ \
-		$(if ${COMPILE_KERNEL_ARGS}, ${COMPILE_KERNEL_ARGS}, \
-		CFLAGS_build-id.o=-DD3_JETSON_BSP_BUILDID='\"$(D3_JETSON_BSP_BUILDID)\"' zImage Image modules dtbs)
-
+	$(v)+$(KCONFIG_ASSIGNMENT) $(MAKE) \
+		$(basic_kernel_compilation_args) \
+		$(if ${COMPILE_KERNEL_ARGS}, \
+			${COMPILE_KERNEL_ARGS}, \
+			 zImage Image modules dtbs)
 
 $(LINUX_BUILD_CONFIG): $(D3_BUILD_CONFIG)
 	$(v)+$(KCONFIG_ASSIGNMENT) $(MAKE) @LINUX_ARGS@ d3_defconfig \
-		$(if ${MIK_ARGS}, ${MIK_ARGS}, CFLAGS_build-id.o=-DD3_JETSON_BSP_BUILDID='\"$(D3_JETSON_BSP_BUILDID)\"') \
+		$(if ${MIK_ARGS}, ${MIK_ARGS}, CFLAGS_build-id.o=-DD3_JETSON_BSP_BUILDID='\"$(D3_JETSON_BSP_BUILDID)\"' -DD3_JETSON_BSP_COMMIT_HASH='\"$(D3_JETSON_BSP_COMMIT_HASH)\"') \
 		$(if ${MIK_TGT}, ${MIK_TGT}, zImage Image modules dtbs)
-
 
 # Make a kernel package (and build the kernel if necessary).  The package name
 # includes the kernel version, BSP version, and customer.
@@ -260,8 +286,7 @@ $(LINUX_BUILD_CONFIG): $(D3_BUILD_CONFIG)
 # compiled twice, as far as I can tell.
 kernel-bindeb-pkg: deploy
 	$(v)rm -f "@TOP_BUILD_PATH@"/*.deb "@TOP_BUILD_PATH@"/*.changes
-	$(v)+$(KCONFIG_ASSIGNMENT) $(MAKE) @LINUX_ARGS@ \
-		CFLAGS_build-id.o=-DD3_JETSON_BSP_BUILDID='\"$(D3_JETSON_BSP_BUILDID)\"' \
+	$(v)+$(KCONFIG_ASSIGNMENT) $(MAKE) $(basic_kernel_compilation_args) \
 		L4TDIR="@L4TDIR@" \
 		KBUILD_PKG_ROOTCMD='fakeroot' \
 		BUILDDEB_NO_DEBUG_PACKAGE=y \
@@ -274,9 +299,10 @@ kernel-bindeb-pkg: deploy
 # Populate build/deploy - internal target.  Don't need to install SIGNED_DTB
 # since it's already in @DEPLOY_BUILD_PATH@.
 _populate_deploy:
-	$(v)install -D "$(linux_ZIMAGE)" "@DEPLOY_BUILD_PATH@/boot/"
-	$(v)install -D "$(linux_IMAGE)" "@DEPLOY_BUILD_PATH@/boot/"
+	$(v)install -D "$(linux_ZIMAGE)" "@DEPLOY_BUILD_PATH@/boot/d3-zImage"
+	$(v)install -D "$(linux_IMAGE)" "@DEPLOY_BUILD_PATH@/boot/d3-Image"
 	$(v)install -D @LINUX_BUILD_PATH@/arch/arm64/boot/dts/*.dtb "@DEPLOY_BUILD_PATH@/boot/"
+	$(v)ln -f @DTB_FILE@ "@DEPLOY_BUILD_PATH@/boot/active-dtb" # Create hardlink to the DTB we want -- so extlinux.conf doesn't need to change
 	@# Make sure the D3 drivers actually made it into the compiled kernel.
 	@# Use the build-id driver as a proxy for all our drivers.
 	$(v)grep buildid_check_dtb_match "@LINUX_BUILD_PATH@/System.map" $(suppress_unless_v) \
@@ -298,7 +324,7 @@ deploy: $(LINUX_BUILD_CONFIG)
 	$(v)+$(KCONFIG_ASSIGNMENT) $(MAKE) sign-dtb
 	$(v)+$(KCONFIG_ASSIGNMENT) $(MAKE) @LINUX_ARGS@ modules_install headers_install firmware_install
 	$(v)+$(KCONFIG_ASSIGNMENT) $(MAKE) _populate_deploy
-	$(vecho) '[$@] complete - build ID $(D3_JETSON_BSP_BUILDID)'
+	$(vecho) '[$@] complete - build ID $(D3_JETSON_BSP_BUILDID), hash $(D3_JETSON_BSP_COMMIT_HASH))'
 
 
 deploy-clean:
@@ -319,6 +345,12 @@ shutdown:
 sync-debug:
 	$(vecho) "SYNC     scripts/target/"
 	$(v)rsync scripts/target/ @USERNAME_AT@@TARGET_HOST@:debug/ $(RSYNC_OPTS)
+	$(vecho) "SYNC     d3-jetson-util/scripts/"
+	$(v)rsync d3-jetson-util/scripts/ @USERNAME_AT@@TARGET_HOST@:debug/util/ $(RSYNC_OPTS)
+	$(vecho) "SYNC     d3-jetson-util/target-overlay/var/nvidia/nvcam/settings/"
+	$(v)rsync d3-jetson-util/target-overlay/var/nvidia/nvcam/settings/ @USERNAME_AT@@TARGET_HOST@:/var/nvidia/nvcam/settings/ $(RSYNC_OPTS)
+	$(v)ssh @USERNAME_SSH@ @TARGET_HOST@ sudo chown root:root /var/nvidia/nvcam/settings/*.isp
+
 
 
 sync-boot:
@@ -361,10 +393,6 @@ $(DEPLOY_BUILD_PATH)/boot/%_sigheader.dtb.encrypt: $(DTB_BUILD_PATH)/%.dtb
 
 sign-dtb: $(SIGNED_DTB)
 
-sync-dtb: $(SIGNED_DTB)
-	$(vecho) "SYNC     $<"
-	$(v)scp @USERNAME_SCP@ "$<" @TARGET_HOST@:~/device_tree.dtb.encrypt
-	$(v)ssh @USERNAME_SSH@ @TARGET_HOST@ sudo dd if=device_tree.dtb.encrypt of=/dev/disk/by-partlabel/kernel-dtb
 
 if XAVIER
 
@@ -385,8 +413,6 @@ sync-kernel: $(linux_SIGNED_IMAGE)
 	$(vecho) "SYNC     $(linux_SIGNED_IMAGE)"
 	$(v)scp @USERNAME_SCP@ $(linux_SIGNED_IMAGE) @TARGET_HOST@:~/boot.img.encrypt $(suppress_unless_v)
 	$(v)ssh @USERNAME_SSH@ @TARGET_HOST@ sudo dd bs=10MB if=boot.img.encrypt of=/dev/disk/by-partlabel/kernel $(suppress_unless_v)
-	$(vecho) "REBOOT"
-	$(v)ssh @TARGET_HOST@ sudo reboot now $(suppress_unless_v)
 
 # On Tx2 the kernel is loaded from /boot on the rootfs.
 # On Xavier (only) the kernel is written to a raw partition.
@@ -417,6 +443,7 @@ show-config:
 	-$(vecho) "Kernel config    : $(if @KCONFIG_FILE@,@KCONFIG_FILE@,<default>)"
 	-$(vecho) "DTB File         : @DTB_FILE@"
 	-$(vecho) "L4T Directory    : @L4TDIR@"
+	-$(vecho) "Linux Version    : @D3_LINUX_KERNEL_TRIPLET@"
 	-$(v) ( id="$$(strings build/kernel/drivers/d3/build-id/build-id.o 2>/dev/null \
 			| grep -Ei '^([0-9a-f]{4,8}-){4}[0-9a-f]{12}' 2>/dev/null)" && \
 		echo "   Build ID of most recent build: $${id}" ) ; \

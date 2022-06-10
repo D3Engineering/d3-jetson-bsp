@@ -62,6 +62,7 @@
 #define STATUS disabled
 #define ORIENTATION 1
 #define TEGRA_SINTERFACE serial_a
+#define VI_INPUT_STREAM 0
 #define EEPROM_ADDR 54
 #define CSI_PORT 0
 #define CSI_LANES 4

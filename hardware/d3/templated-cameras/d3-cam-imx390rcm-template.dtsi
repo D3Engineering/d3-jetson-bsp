@@ -23,6 +23,20 @@
 #define SEN_OUT_NODE CONCAT_2(sen_out_,CAM_NODE)
 
 #define SEN_PATH CONCAT_3(SER_PATH,/,CAM_NODE_NAME)
+/*
+ * - hs-clk-div, div-?-val: When deserializer has a 25MHz clock,
+ *   clkout = 25*160*1/4*m*1/n = 25 * 160 * 1/4 * 1 * 1/37 = 27.027027... MHz
+ * - gpio-rmten: 0x00 = No pins are controlled remotely, not even frame sync.
+ *   This takes effect at probe time.  Frame sync is enabled at runtime by
+ *   fsync-gpio.
+ * - gpio-out-src: (0x02 = nReset held inactive (not in reset)) |
+ *                 (0x01 = FSYNC high when not in frame-sync mode)
+ * - gpio-out-en: (0x02 = nReset) | (0x01 = FSYNC)
+ * - gpio-in-en: 0x00 = no GPIOs are inputs
+ * - fsync-gpio: 0 = GPIO0 is controlled remotely.  Just like gpio-rmten,
+ *   except that this takes effect at runtime, when a sensor driver calls
+ *   ub953_set_frame_sync_enable().
+ */
 #define SER_NODE_OVERLAY	\
 gpio-rmten = <0x0>; \
 gpio-out-src = <0x3>; \

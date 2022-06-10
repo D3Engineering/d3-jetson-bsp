@@ -22,7 +22,8 @@
 / {
 	nvidia,dtsfilename = __FILE__;
 	nvidia,dtbbuildtime = __DATE__, __TIME__;
-	d3,dts-description = "DESC<Nvidia Jetson NX on DesignCore NVIDIA Jetson Xavier NX 12-Camera Carrier Board>DESC";
+	d3,dts-description = "DESC<NVIDIA Jetson NX on DesignCore NVIDIA Jetson Xavier NX 12-Camera Carrier Board>DESC";
 	d3,jetson-bsp-version = D3_JETSON_BSP_VERSION;
 	d3,jetson-bsp-build-id = D3_JETSON_BSP_BUILDID;
+	d3,jetson-bsp-commit-hash = D3_JETSON_BSP_COMMIT_HASH;
 };

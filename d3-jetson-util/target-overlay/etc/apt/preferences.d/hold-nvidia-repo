@@ -1,0 +1,4 @@
+# Prevent upgrading packages from nvidia repo
+Package: *
+Pin: release o=Nvidia
+Pin-Priority: 1

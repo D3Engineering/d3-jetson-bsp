@@ -1,122 +1,47 @@
 #!/bin/bash
-# NOTE: this requires G-16447 in kernel/kernel-4.9.  There is a check
-# for that below.
+set -e
 
-echo "Started building at $(date) on $(hostname)"
-set -o errexit
-set -o pipefail
+# Unset values that are not deliberate and applicable to the BSP build process
+# This BUILD_NUMBER will impact the Kernel build process unintentionally
+unset BUILD_NUMBER
 
-# branch_info: parse the output of `git status --porcelain=v2 --branch`.
-# Usage: branch_info <key> <whether>
-# if <whether> is given and has a nonempty, nonzero value, only the part
-# of the value up to the first slash will be used.
-function branch_info() {
-    git status --porcelain=v2 --branch |
-        perl -sne \
-            'if(
-                ($until_slash && /^# branch.\Q${key}\E ([^\/]+)\//) ||
-                (!$until_slash && /^# branch.\Q${key}\E (.+)/)
-            ) { print $1; exit 0; }
-            ' \
-            -- -key="$1" -until_slash="$2"
-}
+# Make sure that all mktemp and similar create files inside the assigned workspace
+WORKSPACE_TMP=${WORKSPACE:-${PWD}}/build/tmp
+mkdir -p ${WORKSPACE_TMP}
+export TMPDIR="${WORKSPACE_TMP}"
+L4T_DIRECTORY=/opt/nvidia/JetPack_4.6.1_Linux_JETSON_AGX_XAVIER/Linux_for_Tegra
+OTHER_ARGS=()
+for arg in "$@"
+do
+	case $arg in
+		--with-l4t=*)
+		L4T_DIRECTORY="${arg#*=}"
+		shift
+		;;
+		--help|--h)
+		echo "Builds the files to allow utilization of the D3 BSP"
+		echo "Usage: jenkins-build [OPTION]=DIRECTORY"
+ 		echo "--with-l4t = Allows the user to specify the Linux_for_Tegra host directory"
+		exit 0
+		;;
+		*)
+		OTHER_ARGS+=("$1")
+		shift
+		;;
+	esac
+done
 
-###########################################
-
-# Is the repo dirty?
-if git status --porcelain=v2 | grep -q . ; then
-    echo "Repository is dirty - aborting"
-    exit 1
+echo "# L4T Host Directory: $L4T_DIRECTORY"
+if [ ! -z "$OTHER_ARGS" ]
+then
+	echo "# Syntax Error in $OTHER_ARGS, check to ensure that the flag is correct."
 fi
+echo "Build start: $(date)"
 
-# Are we on Jenkins?
-if git config remote.origin.url | grep -q jenkins &>/dev/null ; then
-    jenkins=1
-    echo "Running on Jenkins"
-else
-    jenkins=
-    echo "Running locally"
-fi
-
-# Check command-line arguments
-
-if [[ "$jenkins" && -z "$1" ]]; then
-    echo "Usage: jenkins-build <branch name> | [--fresh-in-place]"
-    exit 1
-elif [[ "$jenkins" ]]; then
-    # If no command options, default to using remote branch mode
-    fresh_in_place=
-    case $1 in
-	# Build using the commit Jenkins checked out
-    	--fresh-in-place) 
-	    fresh_in_place=1
-	    # Needed for git-archive-all.sh
-	    export GIT_BRANCH=$GIT_COMMIT
-	    ;;
-
-	# Build using the remote branch specified by user in Jenkins
-	*)
-    	    export GIT_BRANCH="$(echo "$1" | sed -E 's/^[^\/]+\///')"
-	    ;;
-    esac
-
-elif [[ -z "$jenkins" && "$1" ]]; then
-    echo "Usage on local machine: just say 'jenkins-build' without parameters"
-    echo "and the current branch will be used."
-    exit 1
-elif [[ -z "$jenkins" ]]; then
-    export GIT_BRANCH="$(branch_info head)"
-fi
-
-echo 'Status:'
-git status --porcelain=v2 --branch
-
-# Condition can be changed if options other than --fresh-in-place are added
-if [[ -z "$fresh_in_place" ]]; then
-    # Find our upstream repo
-    if [[ $jenkins ]]; then
-        # On Jenkins, the provided remote starts with the branch.
-        upstream_remote="$(echo "$1" | sed -E 's/\/.*$//')"
-    else
-        # Running locally: use git status on the checked-out branch.
-        # This doesn't work on Jenkins since the checkout doesn't have
-        # an upstream branch configured.
-        upstream_remote="$(branch_info upstream 1)"
-    fi
-
-    if [[ -z "$upstream_remote" ]]; then
-    	echo "Could not find upstream remote for branch $GIT_BRANCH" 1>&2
-    	exit 1
-    fi
-
-    upstream_url="$(git remote get-url "$upstream_remote")"
-
-    if [[ -z "$upstream_url" ]]; then
-        echo "Could not find upstream URL for remote $upstream_remote" 1>&2
-        exit 1
-    fi
-fi
-
-# If we are not running locally, do the recursive clone.
-if [[ "$jenkins" ]]; then
-    # If build was triggered manually, clear out the initial clone that Jenkins did...
-    if [[ -z "$fresh_in_place" ]]; then
-	time find . -mindepth 1 -maxdepth 1 -exec rm -rf {} +
-    	# ... and replace it with a shallow clone of everything.
-    	echo "Cloning recursively from $upstream_remote at $upstream_url"
-    	time git clone -v "$upstream_url" '.' \
-            --recurse-submodules --shallow-submodules --depth 1 --single-branch \
-            --branch "$GIT_BRANCH"
-    elif [[ "$fresh_in_place" ]]; then
-	# If build was triggered by Gerrit, update submodules with depth=1
-	echo "Updating submodules"
-	git submodule update --init --recursive --depth 1
-    fi
-else
-    # Update submodules, just in case it hasn't been done
-    echo "Updating submodules"
-    git submodule update --init --recursive
-fi
+# Do a shallow clone of submodules
+echo "Starting submodule init: $(date)"
+git submodule update --init --recursive --depth 1
+echo "Submodule init complete: $(date)"
 
 # Make sure G-16447 has been applied
 if ! grep -E -q 'KBUILD_DEFCONFIG.+\bd3_defconfig\b' kernel/kernel-4.9/arch/arm64/Makefile ; then
@@ -133,14 +58,12 @@ fi
 # Generate the configure script from configure.ac
 ./bootstrap
 CONFIG_SHELL=/bin/bash /bin/bash ./configure \
-    --with-l4t=/opt/nvidia/JetPack_4.2.2_Linux_GA_P2888/Linux_for_Tegra
+    --with-l4t=$L4T_DIRECTORY
 
 # Assumes arm64, which Jetson always is ;) .
 ARCH=arm64 make linux-defconfig
 
 # Build all the things in all the land.
-#make --debug=bj release-zip     # for debugging
-
 # Normal build
 export CONCURRENCY_LEVEL="$(grep -c '^processor' /proc/cpuinfo)"
 make -j"$CONCURRENCY_LEVEL" release-zip

@@ -1,5 +1,5 @@
 config D3_EARLY_AT24
-	bool "EEPROM driver for D3 CIC (AT24-compatible)"
+	bool "EEPROM driver for D3 6x Serdes Card (AT24-compatible)"
 	depends on NVMEM
 	help
 	  D3 Permits reading configuration from an AT24-compatible EEPROM,

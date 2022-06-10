@@ -30,9 +30,44 @@
 	hs-clk-div = <2>;			\
 	div-m-val = <1>;			\
 	div-n-val = <40>;			\
-	fsync-gpio = <0>;			\
+	i2c-voltage-sel = <0x1>;	\
 	wait-for-self-configure;
 
+&SER_GPIO_NODE {
+	fsync-gpio = <0>;
+};
+
+/*
+ * The pixel clock is driven from the ub953 serializer board. That
+ * board has a 48 Mhz oscillator that is driven through PLLs to
+ * provide a clock to the sensor board.
+ *
+ * The line_length is verified by register 0x3080. If you look
+ * *carefully* at the configuration table you'll see it is set to
+ * 1480. Please note that it is written twice for an unknown
+ * reason. 1480 is the last value written.
+ *
+ * pixel clock = 77714286 Hz
+ * line_length = 1480 clocks
+ *
+ * Time for a single line: (1/pixel clock) * line_length
+ *  (1/77714286) * 1480 == 19 us
+ *
+ * The maximum exposure time is VTS - 6. VTS is 1666 so the maxmimum
+ * exposure time is 1660 lines. This is 31540 us.
+ *
+ * The minimum exposure time is complicated for HDR mode.
+ * The VS min is the minimum very short exposure in rows (0.55 rows).
+ *
+ *  vs min * row_time * exposure ratio
+ *  .55 * 19 us * 256 == 2675.2
+ *
+ * min exposure rows is 141. We set at 145 lines, or 2755us, to have a
+ * little head room. FOR LINEAR MODE, which uses only the Long
+ * exposure, the minimum is 1 line or 19 us.
+ *
+ * 1.5 - 30 gain range
+ */
 
 #define OV10640_MODE_COMMON				\
 	mclk_khz = "25000";				\
@@ -47,13 +82,15 @@
 	active_w = "1280";				\
 	active_h = "1080";				\
 	readout_orientation = "0";			\
-	line_length = "1450";				\
+	line_length = "1480";				\
 	inherent_gain = "1";				\
 	serdes_pix_clk_hz = "535000000";		\
-	pix_clk_hz = "71428571";			\
+	pix_clk_hz = "77714286";			\
 	min_framerate = "30";				\
 	max_framerate = "30";				\
 	embedded_metadata_height = "0";			\
+	min_gain_val = "1.5";				\
+	max_gain_val = "8.0";				\
 	vc_id = STR(PORT_VCID)
 
 
@@ -76,47 +113,37 @@
 
 		deserializer = <&DES_NODE>;
 
+		// These two properties make GPIO reset logic work
+		// These help control the OV10640 reset process more carefully,
+		// which alleviates an issue where sensors don't always probe.
+		// This is not a perfect fix, but should make it work about 98%
+		// of the time.
+		reset-gpios = <&SER_GPIO_NODE 1 GPIO_ACTIVE_HIGH>;
+		pwr-gpios = <&SER_GPIO_NODE 2 GPIO_ACTIVE_HIGH>;
+		i2c-addressing-gpios = <&SER_GPIO_NODE 3 GPIO_ACTIVE_HIGH>;
+
 		/* Long exposure mode (linear) */
 		mode0 {
 			OV10640_MODE_COMMON;
 			mode_type = "bayer";
-			min_gain_val = "1.0";
-			max_gain_val = "8.0";
-			/* minimum is one line */
-			min_exp_time = "20";
-			/* maximum is (frame period - 6 lines) */
-			max_exp_time = "33698";
 			min_hdr_ratio = "1";
 			max_hdr_ratio = "1";
+			min_exp_time = "19";
+			max_exp_time = "31540";
 		};
 
 		/* 3 exposure HDR mode  */
-#ifdef D3_OV10640_HDR_ENABLE
+#if D3_OV10640_HDR_ENABLE
 		mode1 {
 			OV10640_MODE_COMMON;
+			/* HDR mode specific */
 			mode_type = "bayer_wdr_pwl";
-			/* min == max to disable AE gain
-			 * control in HDR mode. */
-			min_gain_val = "1.0";
-			max_gain_val = "8.0";
-
-			min_exp_time = "640";
-			max_exp_time = "32640";
-
-			/* 1 row / 1 row */
-			min_hdr_ratio = "1024.0";
-			/* 1660 rows / 1/32 row */
-			max_hdr_ratio = "1024.0";
+			min_hdr_ratio = "256.0";
+			max_hdr_ratio = "256.0";
+			/* Enforcing a 4 line minimum long exposure time */
+			min_exp_time = "76";
+			max_exp_time = "31540";
 			dynamic_pixel_bit_depth = "20";
-			/* num_control_point = "4"; */
-			/* control_point_x_0 = "2047"; */
-			/* control_point_y_0 = "511"; */
-			/* control_point_x_1 = "16383"; */
-			/* control_point_y_1 = "1407"; */
-			/* control_point_x_2 = "65535"; */
-			/* control_point_y_2 = "2175"; */
-			/* control_point_x_3 = "1048575"; */
-			/* control_point_y_3 = "4095"; */
 			num_control_point = "5";
 			control_point_x_0 = "0";
 			control_point_y_0 = "0";
@@ -128,7 +155,6 @@
 			control_point_y_3 = "2176";
 			control_point_x_4 = "1048576";
 			control_point_y_4 = "4096";
-
 		};
 #endif /* D3_OV10640_HDR_ENABLE */
 

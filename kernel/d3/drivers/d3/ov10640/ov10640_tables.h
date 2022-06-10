@@ -23,14 +23,6 @@
 #include <linux/kernel.h>
 #include <media/camera_common.h>
 
-enum {
-	OV10640_MODE_1280X1080_LONG,
-#ifdef CONFIG_D3_OV10640_HDR_ENABLE
-	OV10640_MODE_1280X1080_HDR,
-#endif /* CONFIG_D3_OV10640_HDR_ENABLE */
-	OV10640_MODE_END,
-	OV10640_MODE_DEFAULT = OV10640_MODE_1280X1080_LONG
-};
 
 struct reg_table {
 	const struct reg_sequence *reg_sequence;

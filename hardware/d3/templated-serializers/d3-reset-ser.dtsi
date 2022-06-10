@@ -19,3 +19,5 @@
 #undef SER_NODE_NAME
 #undef SER_PATH
 #undef DES_LINK_NODE
+
+#undef SER_GPIO_NODE

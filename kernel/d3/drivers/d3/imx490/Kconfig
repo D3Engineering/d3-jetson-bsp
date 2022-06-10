@@ -1,0 +1,5 @@
+config D3_IMX490
+	tristate "IMX490 Camera Driver"
+	select D3_FIXEDPT
+	help
+	  D3 IMX490 Camera Driver for Nvidia Tegra systems.

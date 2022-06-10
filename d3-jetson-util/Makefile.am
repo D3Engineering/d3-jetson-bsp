@@ -5,6 +5,7 @@ dist_udev_DATA = \
 ispdir = /var/nvidia/nvcam/settings/
 dist_isp_DATA = \
 	target-overlay/var/nvidia/nvcam/settings/imx390.isp \
+	target-overlay/var/nvidia/nvcam/settings/imx490.isp \
 	target-overlay/var/nvidia/nvcam/settings/ov10640.isp
 
 bootdir = /boot/
@@ -14,6 +15,10 @@ boot_DATA = \
 extlinuxdir = /boot/extlinux/
 extlinux_DATA = \
 	target-overlay/boot/extlinux/extlinux.conf
+
+aptprefsdir = /etc/apt/preferences.d
+dist_aptprefs_DATA = \
+	target-overlay/etc/apt/preferences.d/hold-nvidia-repo
 
 
 # tegralibdir = /usr/lib/aarch64-linux-gnu/tegra/
@@ -28,7 +33,11 @@ dist_scripts_DATA = \
 	scripts/d3-eeprom-select-cameras \
 	scripts/d3-build-tegra-media-api \
 	scripts/d3-patch-jp-44-jmm-api
+tmplibdir = /usr/lib/d3-jetson-utils
+dist_tmplib_DATA = \
+	target-overlay/usr/lib/d3-jetson-utils/libnvscf.so
 
 install-data-hook:
 	chmod 644 $(DESTDIR)/var/nvidia/nvcam/settings/imx390.isp
+	chmod 644 $(DESTDIR)/var/nvidia/nvcam/settings/imx490.isp
 	chmod 644 $(DESTDIR)/var/nvidia/nvcam/settings/ov10640.isp

@@ -15,6 +15,7 @@
 #define CSI_PORT 0
 #define STATUS disabled
 #define TEGRA_SINTERFACE serial_a
+#define VI_INPUT_STREAM 0
 /* Using CSI_PORT as POSITION is acceptable as long as CSI_PORT is smaller
 than 10. If CSI_PORT is greater than 10, uppercase letters should be used.
 e.g. 8, 9, A, B, C, etc... */
@@ -49,7 +50,7 @@ e.g. 8, 9, A, B, C, etc... */
 #	include "templated-cameras/d3-cam-ov10640-template.dtsi"
 #	include "templated-cameras/d3-cam-imx390-template.dtsi"
 #	include "templated-cameras/d3-cam-imx390rcm-template.dtsi"
-#	include "templated-cameras/d3-cam-vg6768-template.dtsi"
+#	include "templated-cameras/d3-cam-imx390cmf-template.dtsi"
 #	include "templated-cameras/d3-cam-ar0820-fpdlink-template.dtsi"
 #endif
 

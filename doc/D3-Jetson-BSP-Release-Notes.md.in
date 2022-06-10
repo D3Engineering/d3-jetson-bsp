@@ -17,6 +17,7 @@ header-includes: |
  \usepackage{titling}
  \usepackage{transparent}
  \usepackage{float}
+ \usepackage{array}
 
  \usepackage{pifont,mdframed}
  \newenvironment{warning}
@@ -46,9 +47,15 @@ header-includes: |
 \newcommand{\imx}{D3CM-IMX390{} }
 \newcommand{\imxrcm}{D3RCM-IMX390-953{} }
 \newcommand{\ov}{D3RCM-OV10640-953{} }
+\newcommand{\ovnone}{OV10640 }
+\newcommand{\ovnones}{OV10640s }
+\newcommand{\imxnone}{IMX390 }
+\newcommand{\imxrcmnone}{IMX390RCM }
 \newcommand{\nvidia}{NVIDIA\textregistered{} }
-\newcommand{\nvjetson}{JETSON\texttrademark{} }
-\newcommand{\nvxavier}{AGX XAVIER\texttrademark{} }
+\newcommand{\nvjetsonntm}{\nvidia Jetson }
+\newcommand{\nvjetson}{\nvjetsonntm\texttrademark{} }
+\newcommand{\nvxavier}{\nvjetsonntm AGX XAVIER\texttrademark{} }
+\newcommand{\nvxavierntm}{\nvjetsonntm AGX XAVIER }
 \newcommand{\nvnx}{XAVIER\texttrademark{} NX }
 
 \newcommand{\fpdlink}{FPD-LINK\texttrademark{} III{} }
@@ -57,23 +64,24 @@ header-includes: |
 \newcommand{\rspnamelong}{\designcore{} RSP-TX2 Development Kit - \fpdlink{} }
 \newcommand{\rspnameshort}{RSP-TX2 Development Kit - \fpdlink{} }
 
-\newcommand{\cicnamelong}{\designcore \nvidia Jetson SerDes Interface Card{} }
-\newcommand{\cicnameshort}{Jetson SerDes Interface Card{} }
+\newcommand{\cicnamelong}{\designcore \nvjetsonntm SerDes Interface Card{} }
+\newcommand{\cicnameshort}{\nvjetson SerDes Interface Card{} }
 
-\newcommand{\dbloctonamelong}{\designcore \nvidia \nvjetson \nvxavier \fpdlink INTERFACE CARD{} }
-\newcommand{\dbloctonameshort}{\nvidia \nvjetson \nvxavier \fpdlink INTERFACE CARD{} }
+\newcommand{\dbloctonamelong}{\designcore \nvxavierntm \fpdlink INTERFACE CARD{} }
+\newcommand{\dbloctonameshort}{\nvxavier \fpdlink INTERFACE CARD{} }
 \newcommand{\nxcnameshort}{D3 NX Carrier Board{} }
-\newcommand{\nxcnamelong}{\designcore \nvidia \nvjetson \nvnx \fpdlink 12-Camera Carrier Board{} }
+\newcommand{\nxcnamelong}{\designcore \nvjetsonntm \nvnx 12-Camera Carrier Board{} }
 \newcommand{\sdkmanager}{\nvidia SDK Manager{} }
 
+\newcommand{\nvjetpack}{NVIDIA JetPack\texttrademark{} }
 
 \listoffigures
 \listoftables
 
 # D3 Jetson BSP v@VERSION_NAME@
 
-This release supports \nvidia's JetPack @JP_VERSION@ release. This
-release also contains various D3 bug fixes and improvements.
+This release supports and requires \nvjetpack @JP_VERSION@. It contains
+numerous D3 bug fixes and improvements.
 
 \begin{warning}
 
@@ -89,26 +97,27 @@ information.
 # Major Changes
 
 
-* JetPack @JP_VERSION@ supported and required
+* \nvjetpack @JP_VERSION@ supported and required
 
-* Support for the \nxcnameshort
+* Removed support for Tx2, \imxnone 2-lane, and the VG6768 sensor
 
-* Add new hardware specific bringup documentation for \nxcnameshort
+* Added support for TCv3 (Tone Curve Version 3) for \imxnone and \ovnone for improved HDR performance
 
-* New `d3-cam-select-boot` tool for selecting cameras
+* Update \imxnone drivers to disable the Safety Mechanism Pattern Generator\newline
+  Please note that this changes the height for \imxnone to 1096 instead of 1100
 
-* Updated imx390 ISP tuning file
+* \ovnones have significantly faster startup times for streams to avoid Argus timeouts
 
-* Added imx390rcm ISP tuning file
-
-* Camera drivers updates
-
-* Remove old example scripts from d3-jetson-util package
+* Fix issues with \ovnone strapping pins for fewer failures on cold boots
 
 * Improve BSP Release Notes
 
-* Additional hardware support (see Supported Hardware)
+* Refactored internal product code-names in favor of more intuitive ones
 
+* The filesystem is now used to hold the device-tree file instead of the dedicated partition
+
+* Fixed support for M2.M NVMe drives for the \nxcnameshort by preventing the
+ 3v3 power rail from falling during the boot sequence
 
 # Supported Hardware
 
@@ -123,21 +132,16 @@ This release supports the following hardware combinations.
 \begin{tabular}{@{}lll@{}}
 \toprule
 
-Hardware Combination & OV10640 & IMX390 \\
+Hardware Combination & \ovnone & \imxnone \\
 
 \midrule
 
-\rspnamelong \\ (SKU: 1000878) & 6 & 6  \\
-
 \nxcnamelong \\ (SKU: 1001211) & 12 & 12 \\
 
-\nvidia \nvxavier Developer Kit with \dbloctonamelong \\ (SKU: 1000971)
+\nvxavier Developer Kit with \dbloctonamelong \\ (SKU: 1000971)
 &  16 & 16 \\
 
-\nvidia \nvxavier Developer Kit with \cicnamelong \\ (SKU: 1000800)
-&  4 & 4 \\
-
-NVIDIA Tx2 Developer Kit with \cicnamelong \\ (SKU: 1000800)
+\nvxavier Developer Kit with \cicnamelong \\ (SKU: 1000800)
 &  4 & 4 \\
 
 \bottomrule
@@ -168,9 +172,9 @@ Model & Image Sensor & SKU \\ \midrule
 
 The basic steps for installing the D3 BSP on Jetson targets is as follows:
 
-1. Install \nvidia's JetPack v@JP_VERSION@.
+1. Install \nvjetpack @JP_VERSION@.
 
-2. For \rspnameshort manually flash the device tree.
+2. For \nxcnameshort manually flash the device tree.
 
 3. Install the linux-image and d3-jetson-util packages on the target.
 
@@ -179,15 +183,15 @@ The basic steps for installing the D3 BSP on Jetson targets is as follows:
 
 \begin{warning}
 We currently advise against running `apt upgrade` on development systems.
-If you wish to do so, you must disable Nvidia's apt repositories. Running
-`apt upgrade` without doing so may cause your system to upgrade the Jetpack
+If you wish to do so, you must disable \nvidia's apt repositories. Running
+`apt upgrade` without doing so may cause your system to upgrade the JetPack
 version and overwrite D3 BSP changes.
 \end{warning}
 
-## Installing JetPack @JP_VERSION@
+## Installing \nvjetpack @JP_VERSION@
 
-If the target does not already have JetPack @JP_VERSION@ installed use
-\sdkmanager to download and install the JetPack on the host and on the
+If the target does not already have \nvjetpack @JP_VERSION@ installed use
+\sdkmanager to download and install the \nvjetpack on the host and on the
 target. \sdkmanager can be downloaded
 [here](https://developer.nvidia.com/nvidia-sdk-manager).
 
@@ -199,59 +203,76 @@ this [location](https://docs.nvidia.com/sdk-manager/index.html).
 \begin{warning}
 When flashing \nxcnameshort, additional steps are required to use
 the board for development. Please refer to the \nxcnameshort specific
-manual for detailed proceedures. This should be included as a separate
+manual for detailed procedures. This is included as a separate
 PDF with this release. Please see `D3-Jetson-NX-Carrier-Bringup.pdf`.
 \end{warning}
 
-\begin{warning}
-
-After flashing \rspnameshort using \sdkmanager there will be no video
-on the HDMI ports. This is because the device tree flashed to the
-device is for the Tx2 developer kit baseboard. See the section,
-\hyperlink{installing-a-dtb}{"Manually Installing a DTB from the Host"}, to rectify this
-problem.
-
-\end{warning}
 
 ## Manually Installing a DTB from the Host
 
 \hypertarget{installing-a-dtb}{\empty}This section applies only to
-\rspnameshort after flashing using \sdkmanager. For all other D3
+\nxcnameshort after flashing using \sdkmanager. For all other D3
 products this section can be skipped.
 
-Assuming that \sdkmanager installed to default locations then the
-`Linux_for_Tegra` directory on the host machine will be located at
+Assuming that \sdkmanager installed \nvjetpack to its default location then the
+`Linux_for_Tegra` directory ($L4TDIR) on the host machine will be located at
 `~/nvidia/nvidia_sdk/JetPack_@JP_VERSION@_Linux_JETSON_AGX_XAVIER/Linux_for_Tegra.`
-The "Jetson\_AGX\_XAVIER" part of that file path shall differ depending on
-your current Jetson target. It may instead be "Linux\_JETSON\_TX2" or
-"Linux\_JETSON\_XAVIER\_NX"
+The "Jetson\_AGX\_XAVIER" part of that file path may differ depending on
+your current Jetson target. It may instead be "Linux\_JETSON\_XAVIER\_NX", for
+example.
 
-From inside the $L4TDIR directory, do the following.
+Perform the following steps:
 
 1. Change the working directory to $L4TDIR on the host computer.
 
 1. Copy the target \*.dtb from the D3 BSP release into
-   `./kernel/dtb/`. The target dtb is copied into `./kernel/dtb/` as
+   `./kernel/dtb/`. The target dtb is copied into `./kernel/dtb/` because
    `flash.sh` requires it in this location for flashing.
 
-2. Put the \rspnameshort into recovery mode by holding the recovery
+2. Put the \nxcnameshort into recovery mode by holding the recovery
    button while pressing and releasing the reset button.
 
 3. From the host computer run flash.sh with the following arguments
-   `./flash.sh -k kernel-dtb -d ./kernel/dtb/d3-tx2-rsp-fpdlink.dtb jetson-tx2 mmcblk0p1`
+   `./flash.sh -k kernel-dtb -d ./kernel/dtb/d3-nxc-fpdlink.dtb jetson-xavier-nx-devkit-emmc mmcblk0p1`
 
 Once the board is flashed with the correct dtb there should be video
 output on HDMI and the normal D3 installation procedure can be
 followed.
 
-## Installing D3 Kernel and Utilities Packages
+\newpage
+## Installing D3 Kernel and Utilities Packages {#kernel_and_utils}
 
-The D3 Jetson kernel is provided in binary form packaged as a Debian
-package file (e.g. a .deb file). In addition to the kernel package a
-utilities package is provided that contains example scripts, ISP
-override files, and more.
+The D3 Jetson kernel is provided in binary form packaged as Debian
+package files (i.e. .deb files). The following is a list of the different
+package files, with required ones marked accordingly.
+\begin{table}
+\begin{center}
+\begin{tabular}{ | c | m{9.3cm} | m{3.8cm} | }
+\hline
+Required & File & Description\\ \hline
+Yes & d3-jetson-util\_@D3_JETSON_BSP_VERSION@-1\_arm64.deb & Contains all\
+of the utilities of the BSP such as camera selection and the D3 supported\
+camera settings. \\
+\hline
+Yes & linux-image-@D3_LINUX_KERNEL_TRIPLET@+@D3_JETSON_BSP_VERSION@-@CUSTOMER@+\_1\_arm64.deb\
+& Contains the Linux kernel, its modules, and their corresponding files\
+needed to boot a system. \\
+\hline
+No & linux-headers-@D3_LINUX_KERNEL_TRIPLET@+@D3_JETSON_BSP_VERSION@-@CUSTOMER@+\_1\_arm64.deb\
+& Contains all the headers required to build external kernel modules. \\
+\hline
+No & linux-firmware-image-@D3_LINUX_KERNEL_TRIPLET@+@D3_JETSON_BSP_VERSION@-@CUSTOMER@+\_1\_arm64.deb\
+& Contains the firmware used by the Linux kernel. \\
+\hline
+No & linux-libc-dev\_1\_arm64.deb & Contains files required to build userspace\
+programs. These headers are used by GNU glibc and other system libraries. \\
+\hline
+\end{tabular}
+\end{center}
+\end{table}
 
-These steps are performed on the target computer (the \nvjetson).
+Perform the following steps on the target computer (the \nvjetson) to install
+the D3 kernel and its supporting packages.
 
 \begin{warning}
 
@@ -266,22 +287,20 @@ the example scripts will be missing!
 
 \begin{notice}
 
-When linux-image-4.9.140+@D3_JETSON_BSP_VERSION@-@CUSTOMER@+\_1\_arm64.deb is installed you will see notices that say things like the following.
+When linux-image-@D3_LINUX_KERNEL_TRIPLET@+@D3_JETSON_BSP_VERSION@-@CUSTOMER@+\_1\_arm64.deb is installed you will see notices that say things like the following.
 
 \begin{quote}
-Hmm. The package shipped with a symbolic link /lib/modules/4.9.140+@D3_JETSON_BSP_VERSION@-@CUSTOMER@+/source
+Hmm. The package shipped with a symbolic link /lib/modules/@D3_LINUX_KERNEL_TRIPLET@+@D3_JETSON_BSP_VERSION@-@CUSTOMER@+/source
 However, I can not read the target: No such file or directory
-Therefore, I am deleting /lib/modules/4.9.140+@D3_JETSON_BSP_VERSION@-@CUSTOMER@+/source
+Therefore, I am deleting /lib/modules/@D3_LINUX_KERNEL_TRIPLET@+@D3_JETSON_BSP_VERSION@-@CUSTOMER@+/source
 \end{quote}
 
 This notice can safely be ignored.
 
 \end{notice}
 
-\newpage
-
 When installing
-`linux-image-4.9.140+@D3_JETSON_BSP_VERSION@-@CUSTOMER@+_1_arm64.deb`, you may
+`linux-image-@D3_LINUX_KERNEL_TRIPLET@+@D3_JETSON_BSP_VERSION@-@CUSTOMER@+_1_arm64.deb`, you may
 be asked "What do you want to do about modified configuration file
 `kernel-img.conf`?" (see "Package configuration" image below).  Select "install
 the package maintainer's version" as depicted in the image below.
@@ -302,21 +321,30 @@ sudo rm -f /etc/dpkg/dpkg.cfg.d/excludes
 sudo apt update
 
 # Install the kernel and D3 supporting tools
+# This will prompt for a DTB file selection
 sudo apt install \
-  ./linux-image-4.9.140+@D3_JETSON_BSP_VERSION@-@CUSTOMER@+_1_arm64.deb \
+  ./linux-image-@D3_LINUX_KERNEL_TRIPLET@+@D3_JETSON_BSP_VERSION@-@CUSTOMER@+_1_arm64.deb \
   ./d3-jetson-util_@VERSION_NAME@-1_arm64.deb
+
+# Optional (but recommended) packages
+sudo apt install \
+  ./linux-firmware-image-@D3_LINUX_KERNEL_TRIPLET@+@D3_JETSON_BSP_VERSION@-@CUSTOMER@+_1_arm64.deb\
+  ./linux-headers-@D3_LINUX_KERNEL_TRIPLET@+@D3_JETSON_BSP_VERSION@-@CUSTOMER@+\_1\_arm64.deb \
+  ./linux-libc-dev_1_arm64.deb
+
+# Reboot the system to use the new kernel and DTB
+sudo reboot
 ```
 
-After the `apt install` completes, install a DTB file as described in the
-next section.
+The `apt install` will prompt you to select a DTB file as described in the next section.
 
 ## DTB File Selection
 
 \begin{warning}
 
 \hypertarget{dtb-file-selection}{\empty}There are different DTB files
-for different hardware. The correct file must be chosen. The naming
-convention is `@CUSTOMER@-[tegra platform]- [d3 board].dtb`.
+for different hardware combinations. The correct file must be chosen. The naming
+convention is `@CUSTOMER@-[tegra platform]-[d3 board].dtb`.
 
 Installing the wrong DTB file can result in a system that will not
 boot. The system can be recovered by following the steps in
@@ -337,21 +365,25 @@ Base System & Camera Type & DTB Filename \\
 
 \midrule
 
-\rspnameshort & ALL & DesignCore Nvidia Jetson RSP-TX2 FPD-Link \\
+\nvxavier Developer Kit with \dbloctonameshort & ALL & \nvxavier with DesignCore \nvxavier FPD-Link III Interface Card \\
 
-\nvidia Tx2 Developer Kit with \cicnameshort & ALL & Nvidia Jetson TX2 with DesignCore Nvidia Jetson SerDes Sensor Interface Card \\
+\nvxavier Developer Kit with \cicnameshort & ALL & \nvxavier with DesignCore \nvidia Jetson SerDes Sensor Interface Card \\
 
-\nvxavier Developer Kit with \dbloctonameshort & ALL & Nvidia Jetson AGX Xavier with DesignCore Nvidia Jetson AGX Xavier FPD-Link III Interface Card \\
-
-\nvxavier Developer Kit with \cicnameshort & ALL & Nvidia Jetson AGX Xavier with DesignCore Nvidia Jetson SerDes Sensor Interface Card \\
-
-\nxcnameshort & ALL &  Nvidia Jetson NX on DesignCore NVIDIA Jetson Xavier NX 12-Camera Carrier Board \\
+\nxcnameshort & ALL & \nvxavier NX on DesignCore \nvxavier NX 12-Camera Carrier Board \\
 
 \bottomrule
 \end{tabular}%
 }
 \end{minipage}
 \end{table}
+
+The `d3-install-dtb` script provides a convenient way to update the installed
+DTB. `apt` will automatically run the script towards the end of the install
+process if the `.deb` is being used for installation.
+
+Simply follow the prompts in the terminal to select the number of the desired
+kernel and DTB file. See Table \ref{tab:dtb-file-selection} for more detail
+about the available DTB files.
 
 
 ```sh
@@ -375,7 +407,7 @@ sudo reboot
 
 \end{notice}
 
-To verify that the kernel is correct run `uname -a`. You should see
+To verify that the kernel is correct, run `uname -a`. You should see
 output similar to the following. The timestamp in
 this document may not match your output. The important thing to verify
 is that the version is @D3_JETSON_BSP_VERSION@-@CUSTOMER@.
@@ -383,14 +415,14 @@ is that the version is @D3_JETSON_BSP_VERSION@-@CUSTOMER@.
 
 ```sh
 uname -a
-Linux NVIDIA-desktop 4.9.140+@D3_JETSON_BSP_VERSION@-@CUSTOMER@+ #1 SMP PREEMPT Wed Jun 19 10:15:08 EDT 2019 aarch64 aarch64 aarch64 GNU/Linux
+Linux nvidia-desktop @D3_LINUX_KERNEL_TRIPLET@+@D3_JETSON_BSP_VERSION@-@CUSTOMER@+ #1 SMP PREEMPT Wed Jun 19 10:15:08 EDT 2019 aarch64 aarch64 aarch64 GNU/Linux
 ```
 
 
 To verify that the dtb is correct look at
 `/proc/device-tree/nvidia,dtsfilename`. You should see a file name
 that is very similar to the name of the dtb that was installed. As an
-example, for \rspnameshort you would see `d3-tx2-rsp-fpdlink.dts`. You
+example, for the \nxcnameshort you would see `d3-nxc-fpdlink.dts`. You
 can also verify the build time of the device tree with
 `/proc/device-tree/nvidia,dtbbuildtime`. The build time in this
 document may not match the build time you see but should be close in time to the build time reported by `uname -a`.
@@ -405,17 +437,17 @@ The build time file is `nvidia,dtbbuildtime`. It is not
 
 ```sh
 cat /proc/device-tree/nvidia,dtsfilename
-arch/arm64/boot/dts/../../../../../../hardware/d3/d3-tx2-rsp-fpdlink.dts
+arch/arm64/boot/dts/../../../../../../hardware/d3/d3-nxc-fpdlink.dts
 cat /proc/device-tree/nvidia,dtbbuildtime
 Jun 18 201911:58:39
 ```
 
-As a optional step you can verify that the build ID for the device
+As an optional step you can verify that the build ID for the device
 tree matches the build ID for the kernel. This indicates that the
 device tree and kernel were built from the same code base at the same
 time. A new build ID is generated for every build that D3 makes.
 
-The build ID for the kernel should match the build id for the device
+The build ID for the kernel should match the build ID for the device
 tree.
 
 
@@ -426,16 +458,16 @@ system.
 
 
 ```sh
-# The kernel build id
+# The kernel build ID
 cat /sys/module/build_id/version
 e2080b9d-68d4-4d37-a906-02cc1491bd39
 
-# The device tree build id
+# The device tree build ID
 cat /proc/device-tree/d3,jetson-bsp-build-id
 e2080b9d-68d4-4d37-a906-02cc1491bd39
 ```
 
-To verify that the cameras are operational attach 1 to 6 cameras
+To verify that the cameras are operational, attach 1 to 6 cameras
 (depending on your hardware configuration) and then test each
 individually with either `nvgstcapture` or `argus_camera`. See this
 \hyperlink{nvgst-known-issue}{known issue} regarding sensor modes with
@@ -456,7 +488,7 @@ nvgstcapture --sensor-id $N
 \begin{figure}[H]
 \caption{\cicnamelong}
 \centering
-\includegraphics[width=0.5\textwidth]{img/d3-cic-vc-key-points.jpg}
+\includegraphics[width=0.5\textwidth]{img/d3-6x-serdes-vc-key-points.jpg}
 \end{figure}
 
  * Connect the camera module(s) to port(s) J6-J9, blue box.
@@ -467,7 +499,7 @@ nvgstcapture --sensor-id $N
 \begin{figure}[H]
 \caption{\cicnamelong}
 \centering
-\includegraphics[width=0.5\textwidth]{img/d3-cic-jumpers.jpg}
+\includegraphics[width=0.5\textwidth]{img/d3-6x-serdes-jumpers.jpg}
 \end{figure}
 
  * Port J13 and J14 should be set in-board as pictured. (see circle)
@@ -481,7 +513,7 @@ nvgstcapture --sensor-id $N
 \begin{figure}[H]
 \caption{\dbloctonamelong}
 \centering
-\includegraphics[width=0.5\textwidth]{img/d3-2xocto-key-points.png}
+\includegraphics[width=0.5\textwidth]{img/d3-xavier-16x-fpdlink-key-points.png}
 \end{figure}
 
  * Connect camera modules to any available port.
@@ -490,6 +522,23 @@ nvgstcapture --sensor-id $N
 
  * Supply 12 volts to the barrel connector. (see arrow)
 
+## Removing the D3 Kernel and Utilities Packages
+
+The D3 Utilities package automatically overwrites extlinux.conf on installation.
+Due to this, in order to remove the package completely, one needs to manually
+intervene after the standard package removal process.
+
+The removal of the D3 kernel can be done with a standard `sudo apt remove` or,
+to remove the accompanying configuration, `sudo apt purge`.
+
+After the requisite files listed in section \ref{kernel_and_utils} are removed,
+restore the original extlinux.conf, which was automatically backed up at
+installation, with the command:
+```bash
+sudo cp /boot/extlinux/extlinux.conf- /boot/extlinux/extlinux.conf
+```
+After this action is performed, please inspect the configuration in order to
+ensure that rebooting will not require re-flashing the SoM.
 \newpage
 
 # Configuration and Use
@@ -498,19 +547,19 @@ nvgstcapture --sensor-id $N
 
 \hypertarget{selecting-camera-type}{\empty}
 
-For Tx2 and \nvxavier systems a kernel parameter is used to configure the camera
+For \nvxavier systems a kernel parameter is used to configure the camera
 type for each port. This technique makes it possible to mix and match
 all D3 supported camera types on a single system.
 
 ### Camera Selection Utility
 
-The D3 BSP comes with a camera selection that will automatically make changes
-to the kernel parameters based on your selection. This can be accessed by
-using the `d3-select-cameras-boot` script that is supplied by the
+The D3 BSP comes with a camera selection tool that will automatically make
+changes to the kernel parameters based on your selection. This can be accessed
+by using the `d3-select-cameras-boot` script that is supplied by the
 d3-jetson-utils package.
 
 The script will read the currently active device tree to find available
-cameras to enable. You must install a the correct device tree for your
+cameras to enable. You must install the correct device tree for your
 system via `d3-install-dtb` and reboot before using the camera selection
 script.
 
@@ -518,7 +567,7 @@ Once the main selection menu is open, you should see a list of all camera
 ports available on your system. You may navigate into these using the
 arrow and `<enter>` keys.
 
-Inside a selection menu for a camera port, you will be given the option to
+Inside the selection menu for a camera port, you will be given the option to
 enable an available camera to be used on that port. Select the cameras you wish
 to use via navigating with the arrow keys and selecting with `<spacebar>`.
 Once you have configured the camera port, hit `<enter>` to save your selection.
@@ -531,14 +580,14 @@ Once saved, changes will be read by the kernel during the next boot.
 
 ### Manual Use of "active_overlays" Kernel Parameter
 
-On Tx2 and \nvxavier, kernel parameters are specified in the
+Kernel parameters are specified in the
 `/boot/extlinux/extlinux.conf` file. This file is modified when the D3
 linux-image and d3-jetson-util deb packages are installed. This file
 controls which kernel is loaded along with parameters passed to the kernel.
 
 The kernel parameter that is used for camera selection is named
 `active_overlays`. This is a comma separated string that pairs camera
-model names with indices that correspond to the FPDLink-III input
+model names with indices that correspond to the \fpdlink input
 ports of the system.
 
 
@@ -551,12 +600,12 @@ ports of the system.
 \begin{tabular}{@{}ccccl@{}}
 \toprule
 
-Camera Name & SKU &  Active Overlay Model Name\\
+Camera Name & SKU & Active Overlay Model Name\\
 
 \midrule
 
-\imx  & 1000406 & imx390  \\
-\imxrcm  & 1000843, 1000844 & imx390rcm  \\
+\imx  & 1000406 & imx390\\
+\imxrcm  & 1000843, 1000844 & imx390rcm\\
 \ov & 1000581, 1000508 & ov10640\\
 
 \bottomrule
@@ -566,18 +615,18 @@ Camera Name & SKU &  Active Overlay Model Name\\
 \end{table}
 
 
-The following string configures the \rspnameshort for 6 \ov
+The following string configures the \nxcnameshort for 6 \ovnone
 cameras. This argument is applied to the `APPEND` stanza in
 `/boot/extlinux/extlinux.conf`.
 
 `active_overlays=ov10640_0,ov10640_1,ov10640_2,ov10640_3,ov10640_4,ov10640_5`
 
-The following string would configure the first port for an \imx, the
-last port an \imxrcm and all other ports configured for \ov.
+The following string would configure the first port for an \imxnone, the
+last port an \imxrcmnone and all other ports configured for \ovnone.
 
 `active_overlays=imx390_0,ov10640_1,ov10640_2,ov10640_3,ov10640_4,imx390rcm_5`
 
-The following string configures the \nvxavier for 4 \ov
+The following string configures the \nvxavier for 4 \ovnone
 cameras. This argument is applied to the `APPEND` stanza in
 `/boot/extlinux/extlinux.conf`. This string sets up the first camera
 of each set of 4 cameras to be enabled. For a visual representation, see
@@ -585,15 +634,15 @@ the section \hyperlink{connecting-dblocto}{Connection to \dbloctonameshort}
 
 `active_overlays=ov10640_0,ov10640_4,ov10640_8,ov10640_12`
 
-This is example of a full `extlinux.conf` file configured for 6 \ov
-camera modules. The ov10640 portion is paired with a zero based index
-that corresponds to the FPDLink-III input ports.
+This is example of a full `extlinux.conf` file configured for 6 \ovnone
+camera modules. The \ovnone portion is paired with a zero based index
+that corresponds to the \fpdlink input ports.
 
 ```
 TIMEOUT 30
 DEFAULT primary
 
-MENU TITLE D3-Tx2 eMMC boot options
+MENU TITLE D3-NxC eMMC boot options
 
 LABEL primary
       MENU LABEL D3 Debug Kernel
@@ -629,38 +678,6 @@ d3_<position>_<imager-name>
 ```
 
 
-On \cicnameshort for both NVIDIA Tx2 Developer Kit and \nvxavier the
-<position> field corresponds to the port number, indexed from 0-F in uppercase hex.
-
-\newpage
-On \rspnameshort the <position> field is as described in the table below.
-
-\begin{table}[h]
-\begin{minipage}{\textwidth}
-\centering
-\caption{Camera Position Mapping for \rspnameshort}
-\label{}
-\resizebox{0.33\textwidth}{!}{%
-\begin{tabular}{@{}lll@{}}
-\toprule
-
-Sensor ID & Position Field \\
-
-\midrule
-
-Sensor 0  & 0 \\
-Sensor 1  & 1 \\
-Sensor 2  & 2 \\
-Sensor 3  & 3 \\
-Sensor 4  & 4 \\
-Sensor 5  & 5 \\
-
-\bottomrule
-\end{tabular}%
-}
-\end{minipage}
-\end{table}
-
 \newpage
 On \dbloctonameshort <position> field is as described in the table below.
 
@@ -690,9 +707,8 @@ Sensors 12-15  & 12,13,14,15 \\
 \end{table}
 
 
-\newpage
-The <imager-name> can be any supported imager (e.g. ov10640, imx390,
-imx390rcm, etc). For example, an OV10640 plugged into port 0 on
+The <imager-name> can be any supported imager (e.g. \ovnone, \imxnone,
+\imxrcmnone, etc.). For example, an \ovnone plugged into port 0 on
 \cicnameshort would use the following badge:
 
 ```c
@@ -712,7 +728,7 @@ This application is not required. It is, however, highly educational
 and a great tool for testing cameras.
 
 Use the \sdkmanager to install the Jetson SDK components. Be sure to
-*un-check* Jetson OS! If you forget to un-check this option you must
+*uncheck* Jetson OS! If you forget to uncheck this option you must
 re-install all D3 provided software.
 
 ![SDK Installer](img/sdk-installer.png "SDK Manager Installer")
@@ -738,7 +754,7 @@ argus_camera&
 ```
 
 Argus Camera has a total of 4 modes. These are explained below. You can
-chose different modes using the drop down button in the top right corner
+choose different modes using the dropdown button in the top right corner
 of the application.
 
 The application will launch into "capture" mode by default. This allows
@@ -764,10 +780,30 @@ of this mode. If testing more than one of the cameras, make sure to use
 
 ## OV10640
 
-This release includes one sensor mode for \ov. This mode uses the
+This release includes two sensor modes for \ovnones. Mode 0 uses the
 long exposure of the camera. This mode operates at 30 fps and delivers
-12 bits-per-pixel of depth. The resolution is 1280x1080.
+12 bits-per-pixel of depth. The resolution is 1280x1080. Mode 1 uses three
+exposures in order to form a single HDR mode capture, also running at 30 fps
+at a resoltuion of 1280x1080. Below is a table of modes for the \ovnone.
 
+\begin{table}[h]
+\begin{minipage}{\textwidth}
+\centering
+\caption{\ovnone Sensor Modes}
+\label{tab:supported-camera-modules}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{@{}ccccl@{}}
+\toprule
+
+Sensor Mode ID &  Resolution &  Bit Depth & Frame Rate & Description\\
+\midrule
+0  & 1280x1080 & 12 & 30 & Linear mode \\
+1  & 1280x1080 & 20 & 30 & HDR mode \\
+\bottomrule
+\end{tabular}%
+}
+\end{minipage}
+\end{table}
 
 ## D3CM-IMX390
 
@@ -775,11 +811,12 @@ This release includes three sensor modes for SONY\textregistered{}
 IMX390.
 
 \begin{warning}
-Switching of modes at run-time is not currently supported.
+Switching of modes for this sensor currently requires a system reboot to
+guarantee register settings.
 \end{warning}
 
 \begin{notice}
-Raw captures from \imx are misaligned when using the default stride length.
+Raw captures from \imxnone are misaligned when using the default stride length.
 Please follow the directions below to capture a correctly aligned raw capture.
 \end{notice}
 
@@ -789,12 +826,18 @@ v4l2-ctl --stream-mmap --stream-count --stream-skip=16 --stream-to=out.raw -cpre
 ```
 `cpreferred_stride` must be set to 4096. This is in **bytes**, not pixels.
 To view the capture correctly, the correct **pixels** must be used, which is 2048.
+To bypass the VI settings in the kernel driver, which is needed after streaming
+from `argus_camera`, add `bypass_mode=0` to the command line flags, as shown in the example
+given below:
 
+```sh
+v4l2-ctl --set-ctrl bypass_mode=0
+```
 
 \begin{table}[h]
 \begin{minipage}{\textwidth}
 \centering
-\caption{IMX390 Sensor Modes}
+\caption{\imxnone Sensor Modes}
 \label{tab:supported-camera-modules}
 \resizebox{\textwidth}{!}{%
 \begin{tabular}{@{}ccccl@{}}
@@ -804,23 +847,34 @@ Sensor Mode ID &  Resolution &  Bit Depth & Frame Rate & Description\\
 
 \midrule
 
-0  & 1936x1100 & 12 & 30 & Sub-pixel 1 low conversion linear mode (recommended) \\
-1  & 1936x1100 & 12 & 30 & Sub-pixel 1 high conversion linear mode \\
-2  & 1936x1100 & 12 & 30 & Sub-pixel 2 linear mode \\
-
+0  & 1936x1096 & 12 & 30 & Sub-pixel 1 low conversion linear mode (recommended) \\
+1  & 1936x1096 & 12 & 30 & Sub-pixel 1 high conversion linear mode \\
+2  & 1936x1096 & 12 & 30 & Sub-pixel 2 linear mode \\
+3  & 1936x1096 & 20 & 30 & HDR mode \\
 \bottomrule
 \end{tabular}%
 }
 \end{minipage}
 \end{table}
 
-Use `argus_camera` to preview different modes. You must restart the
-system if you choose to view a different mode with this camera at this
-time. While the system may display video the camera will not be
-configured properly.
+Use `argus_camera` to preview different modes. You must restart the system if
+you choose to view a different mode with this camera at this time. You also may
+need to explicitly set the desired mode before streaming using `v4l2-ctl` or
+`argus_camera`. For example:
 
-For this camera mode 0, sub-pixel 1 low conversion is recommended for
-most uses. In low light conditions mode 1, sub-pixel 1 high conversion
+```bash
+v4l2-ctl -csensor_mode=n # where n is the integer sensor mode
+```
+
+```bash
+argus_camera --sensormode=n # where n is the integer sensor mode
+```
+
+Changing modes without rebooting may display video, but we cannot guarantee
+that the camera will be configured properly at this time.
+
+Mode 0 (sub-pixel 1 low conversion) is recommended for
+most uses-cases. In low light conditions, mode 1 (sub-pixel 1 high conversion)
 may be more suitable.
 
 
@@ -831,17 +885,13 @@ argus_camera --sensormode=0
 
 ## Frame Synchronization
 
-
 This feature requires the installation of D3's `d3-camsync` Debian
-package which depends on `lua`. It is recommended that `v4l-utils` be
-installed for assisting in setting various camera controls from the
-shell. The `apt` tool should resolve these dependencies automatically.
+package, which depends on `lua`. Installing `v4l-utils`
+is recommended for setting various camera controls from the
+shell. The `apt` package manager should resolve these dependencies automatically.
 
-The version numbers in the example may not be the current
-release. Please see D3 for the latest `d3-camsync` release.
-
-Please note that at the current time, the frame sync feature is only
-available on \rspnameshort.
+The version numbers in this example may not match the current
+releases. Please contact D3 for the latest `d3-camsync` release.
 
 ```
 sudo apt update
@@ -864,12 +914,12 @@ sudo sync.lua
 
 The camera module must also support frame synchronization for this
 feature to work properly. At this time D3 supports frame
-synchronization with \ov
+synchronization with \ovnone
 
 \end{notice}
 
-\ov must be placed in frame sync mode which is sometimes called slave
-mode. By default the camera operates in a free-running mode at 30
+\ovnone must be placed in frame sync mode which is sometimes called slave
+mode. By default, the camera operates in a free-running mode at 30
 frames per second. You can set this mode using the v4l2
 frame_sync_enable control from your application. This can be set from
 the command line using the example below.
@@ -880,8 +930,13 @@ v4l2-ctl -cframe_sync_enable=1
 
 Each camera can be set independently. It is not necessary to enable
 frame sync on every camera; only for the cameras that should be
-synchronized.
+synchronized. To bypass the VI settings in the kernel driver, which is needed after streaming
+from `argus_camera`, add `bypass_mode=0` to the command line flags, as shown in the example
+given below:
 
+```sh
+v4l2-ctl --set-ctrl bypass_mode=0
+```
 
 # Sensor IDs
 
@@ -899,15 +954,47 @@ second port) and another on J5 then the J3 camera would have sensor-id
 
 # Known Issues
 
-* The IMX390 driver does not support run-time sensor mode switching.
+* \hypertarget{nvgst-known-issue}{\empty}`nvgstcapture` and
+  `nvarguscamerasrc` have no mechanism for choosing the
+  sensor-mode. On \nvxavier it seems that the sensor mode is
+  unpredictable with these two tools. The `argus_camera` tool can be
+  used with `--sensormode=$N` where $N is the sensor mode number
+  reliably.
 
-* HDR support is disabled
+* The \imxnone driver does not support run-time sensor mode switching.
 
 * The combination of \nvxavier and \cicnameshort is known to
   report a duplicate sysfs entry. This can safely be ignored and does
   not affect the system.
 
-* The use of multiple \ov on \rspnameshort is not stable
+* Trying to stream on the \nxcnameshort with Argus with both \ovnone
+  and \imxnone does not work
+
+* Removing d3-jetson-utils requires manually editing extlinux.conf in order to
+  automatically choose which kernel to automatically boot
+
+* OP-2235: Argus camera positions above 6 intermittently cause the Argus daemon
+  to report invalid sensor placement errors. Whether streams are affected seems
+  to be hit-or-miss.
+
+* OP-2236: UB960 digital reset causes Argus to report `CSIMUX_FRAME` errors
+  when one stream is closed while others are still running. The running streams
+  do not appear to be otherwise affected.
+
+* OP-2239: Streaming multiple \imxnone cameras simultaneously in Argus may
+  cause sequence errors according to the Argus daemon, resulting in instability
+  after streams have started. In most cases the camera still streams despite
+  the sequence errors, but automated scripts may see exit codes and assume
+  failure. This issue does not appear to occur when streaming one camera.
+
+* OP-2242: `argus_camera` streams intermittently start with high ISP noise.
+  The stream looks very white and slightly scrambled with what look like
+  scan lines throughout.  Pointing the camera at a dark scene (e.g. putting the
+  lens against the table) for a few seconds will eliminate the noise.
+
+* OP-2243: Argus camera streams occasionally time out with no video. \nvidia
+  recommends staggering the start of each camera stream by at least 250 ms if
+  using multiple cameras to mitigate this.
 
 \newpage
 
@@ -915,6 +1002,28 @@ second port) and another on J5 then the J3 camera would have sensor-id
 
 This change-log is not exhaustive. This provides a historical
 reference of the major changes made between releases.
+
+## Major Changes 4.0.0
+
+* JetPack 4.4 supported and required
+
+* Support for the \nxcnameshort
+
+* Add new hardware specific bringup documentation for \nxcnameshort
+
+* New `d3-cam-select-boot` tool for selecting cameras
+
+* Updated \imxnone ISP tuning file
+
+* Added \imxrcmnone ISP tuning file
+
+* Camera drivers updates
+
+* Remove old example scripts from d3-jetson-util package
+
+* Improve BSP Release Notes
+
+* Additional hardware support (see Supported Hardware)
 
 ## Major Changes 3.0.2
 
@@ -926,57 +1035,57 @@ reference of the major changes made between releases.
 
 ## Major Changes 3.0.0
 
-* JetPack 4.3 supported and required
+* \nvjetpack 4.3 supported and required
 
 * Virtual Channel support
   * Up to 16 cameras on \dbloctonameshort
-  * Up to 4 FPDLINK-III cameras on \cicnameshort
+  * Up to 4 \fpdlink cameras on \cicnameshort
 
 * Simplified dtb file selection on \nvxavier
 
 * camera postion for ISP overrides simplified to port index
 
-* infinite-cam-timeout mode is enabled for Argus daemon to workout
+* infinite-cam-timeout mode is enabled for Argus daemon to work out
   issue #627 on \nvxavier and occasional timeouts launching multiple
-  IMX390 on Tx2 (issue #634)
+  \imxnone on Tx2 (issue #634)
 
 
 ## Major Changes 2.0.0
 
-* JetPack 4.2.2 supported and required
+* \nvjetpack 4.2.2 supported and required
 
-* Multiple camera models suported on RSP simultaneously
+* Multiple camera models supported on RSP simultaneously
 
 * Less complex device tree for users
 
-* infinite-cam-timeout mode is enabled for Argus daemon to workout
+* infinite-cam-timeout mode is enabled for Argus daemon to work out
   issue #627 on \nvxavier and occasional timeouts launching multiple
 
 ## Major Changes 1.3.3
 
 This is a maintenance release that corrects an image quality problem
-with OV10640 cameras.
+with \ovnone cameras.
 
-* OV10640: HDR support disabled until quality issues can be solved
+* \ovnone: HDR support disabled until quality issues can be solved
 
-* OV10640: reverted to 1.3.1 tuning for better linear mode quality
+* \ovnone: reverted to 1.3.1 tuning for better linear mode quality
 
 ## Major Changes 1.3.2
 
-* IMX390: improved HDR support
+* \imxnone: improved HDR support
 
-* OV10640: improved HDR support
+* \ovnone: improved HDR support
 
-* OV10640: fixed incorrect exposure time control
+* \ovnone: fixed incorrect exposure time control
 
-* Xavier: fixed lockups on warm boots with OV10640
+* Xavier: fixed lockups on warm boots with \ovnone
 
 * frame sync: \rspnameshort now supports frame synchronization
 
 
 ## Major Changes 1.3.1
 
-* Adds libnvodm_imager.so from Nvidia to correct the sensor-id
+* Adds libnvodm_imager.so from \nvidia to correct the sensor-id
   assignment issue.
 
 ## Major Changes 1.3.0
@@ -989,12 +1098,11 @@ with OV10640 cameras.
   releases were based on Ubuntu 16.04.
 
 * There is no longer a default username and password. The user account
-  is created when you first start the system after installing \nvidia
-  JetPack 4.2.
+  is created when you first start the system after installing \nvjetpack 4.2.
 
 * D3 recommends the use of the `argus_camera` application that is
   available from the tegra_multimedia_api package that can be
-  installed from \nvidia JetPack installer. The application has full
+  installed from \nvjetpack installer. The application has full
   source code and is easy to use for testing and evaluating
   cameras. See the \hyperlink{argus-camera-installation}{installation section}
   for instructions on building and installing `argus_camera`.
@@ -1013,12 +1121,12 @@ with OV10640 cameras.
   are detected on \fpdlink based systems from cold boot and from warm
   boot.
 
-* OV10640: HDR mode added (see \hyperlink{nvgst-known-issue}{known issues})
+* \ovnone: HDR mode added (see \hyperlink{nvgst-known-issue}{known issues})
 
-* OV10640: supports multiple modes (linear and HDR)
+* \ovnone: supports multiple modes (linear and HDR)
 
-* IMX390: HDR mode added
+* \imxnone: HDR mode added
 
-* IMX390: supports multiple modes with the restriction that the mode
+* \imxnone: supports multiple modes with the restriction that the mode
   must not be changed at run-time. To switch modes a system restart is
   required.

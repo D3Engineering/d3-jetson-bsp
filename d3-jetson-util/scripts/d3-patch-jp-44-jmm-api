@@ -1,21 +1,12 @@
 #!/bin/bash
 #
-# Copyright (C) 2020 D3 Engineering
-#
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; version 2 of the License.
-#
-# This program is distributed in the hope that it will be useful, but WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
-# more details.
-#
-#
-# This patch applies to only the Nvidia Jetpack 4.4 Jetson Multimedia API.
+# This is a simple patch script to resolve a bug in the Tegra Multi media API
+# on Jetpack 4.4.0. This causes a segfault in Argus Camera if not fixed.
 #
 # It replaces the CameraDevice.h header in accordance to Nvidia recommendation
 # https://forums.developer.nvidia.com/t/l4t-r32-4-3-breaks-argus-camera-and-causes-segmentation-fault-sigsegv/141432/9
+#
+# Copyright (C) 2020 D3 Engineering
 
 file_to_patch="/usr/src/jetson_multimedia_api/argus/include/Argus/CameraDevice.h"
 

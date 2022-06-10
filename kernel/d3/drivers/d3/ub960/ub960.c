@@ -30,6 +30,7 @@
 #include <d3/d3-jetson-bsp.h>
 
 #include <d3/ub960.h>
+#include <d3/common.h>
 
 /*
  * Default frame sync timings used if not specified in device tree
@@ -1213,7 +1214,11 @@ static int ub960_serializer_load(struct ub960 *self,
 			dev_warn(self->dev, "%s: expecting 1 node", child->name);
 			return 0;
 		}
-		TRY(err, ub960_devinfo_load(self, child, &port->sensor_info));
+		err = ub960_devinfo_load(self, child, &port->sensor_info);
+		// Required for UB960 to ignore GPIO controller
+		if(err) {
+			continue;
+		}
 		++count;
 	}
 	if (count != 1) {

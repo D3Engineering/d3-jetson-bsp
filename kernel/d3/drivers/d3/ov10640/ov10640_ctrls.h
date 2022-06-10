@@ -26,5 +26,5 @@ int ov10640_ctrls_count(void);
 int ov10640_ctrls_init(struct ov10640 *self);
 int ov10640_hflip_set(struct ov10640 *self, bool hflip);
 int ov10640_vflip_set(struct ov10640 *self, bool vflip);
-
+int ov10640_test_pattern_set(struct ov10640 *self, bool is_enabled);
 #endif

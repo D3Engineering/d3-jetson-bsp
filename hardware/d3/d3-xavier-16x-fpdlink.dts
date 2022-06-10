@@ -1,0 +1,30 @@
+/*
+ * Copyright (c) 2021, D3 Engineering.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+
+#include "d3-string-utils.dtsi"
+
+#include "d3-xavier-16x-fpdlink.dtsi"
+#include "d3-xavier-16x-fpdlink-cam0-3.dtsi"
+#include "d3-xavier-16x-fpdlink-cam4-7.dtsi"
+#include "d3-xavier-16x-fpdlink-cam8-11.dtsi"
+#include "d3-xavier-16x-fpdlink-cam12-15.dtsi"
+#include "d3-jetson-bsp-version.dtsi"
+
+/ {
+	nvidia,dtsfilename = __FILE__;
+	nvidia,dtbbuildtime = __DATE__, __TIME__;
+	d3,dts-description = "DESC<NVIDIA Jetson AGX Xavier with DesignCore NVIDIA Jetson AGX Xavier FPD-Link III Interface Card>DESC";
+	d3,jetson-bsp-version = D3_JETSON_BSP_VERSION;
+	d3,jetson-bsp-build-id = D3_JETSON_BSP_BUILDID;
+	d3,jetson-bsp-commit-hash = D3_JETSON_BSP_COMMIT_HASH;
+};

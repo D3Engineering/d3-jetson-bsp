@@ -16,6 +16,10 @@
 #	define PORT_IDX CSI_PORT
 #endif
 
+#ifndef VI_INPUT_STREAM
+#	error "Missing definition: VI_INPUT_STREAM"
+#endif
+
 #define VI_PORT_NODE CONCAT_2(vi_port_,PORT_IDX)
 #define VI_IN_NODE CONCAT_2(vi_in_,PORT_IDX)
 #define CHAN_NODE CONCAT_2(chan_,PORT_IDX)
@@ -47,7 +51,7 @@
 			reg = <PORT_IDX>;
 			VI_IN_NODE: endpoint {
 				status = STR(STATUS);
-				port-index = <CSI_PORT>;
+				port-index = <VI_INPUT_STREAM>;
 				bus-width = <CSI_LANES>;
 				vc-id = <PORT_VCID>;
 			};

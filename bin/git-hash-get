@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+
+# The purpose of this script is to find the git commit hash for the
+# current BSP tree. If that's not possible or the tree is dirty an
+# attempt is made to identify the build in a less desirable manner.
+#
+# This was originally written to make it easier to identify kernels
+# source code at runtime particularly for the Image Science team.
+
+WHO=$(git config --global user.email 2> /dev/null)
+WHEN=$(date)
+MSG="$WHO $WHEN"
+
+is-in-git-tree()
+{
+    [ -d '.git' ]
+}
+
+
+is-clean()
+{
+    # I don't think we need --submodule=diff since the commit ids for
+    # the submodule would be different.
+    git diff --quiet
+}
+
+
+is-untracked()
+{
+    # Files with ?? as a prefix are untracked
+    [[ -z $(git status -s --porcelain | egrep '^\?\?') ]]
+}
+
+
+get-head-rev-hash()
+{
+    git rev-parse --short HEAD
+}
+
+
+main()
+{
+
+    if ! is-in-git-tree; then
+        echo "not git controlled $MSG"
+        exit
+    fi
+
+    if ! is-clean; then
+        echo "dirty source tree $MSG"
+        exit
+    fi
+
+    if is-untracked; then
+        echo "untracked source $MSG"
+        exit
+    fi
+
+    # If we make it this far print the short commit hash
+    get-head-rev-hash
+}
+
+main

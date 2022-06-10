@@ -8,4 +8,4 @@ ssh @USERNAME_SSH@ -t "$TARGET" 'sudo apt-get -y update && sudo apt-get install 
 make sync-debug
 ssh @USERNAME_SSH@ -t "$TARGET" 'cd debug; sudo ./prep-new-debug-system'
 ssh @USERNAME_SSH@ -t "$TARGET" 'debug/disable-screen-lock'
-ssh @USERNAME_SSH@ -t "$TARGET" 'cd debug; ./build-tm-api'
+ssh @USERNAME_SSH@ -t "$TARGET" 'cd debug/util; ./d3-build-tegra-media-api'

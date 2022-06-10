@@ -1,6 +1,6 @@
 dnl A configure.ac for working with the Jetson platform from Nvidia.
 dnl See Makefile.am or README.md for more information
-dnl Copyright (c) 2019--2020 D3 Engineering, LLC.
+dnl Copyright (c) 2019--2022 D3 Engineering, LLC.
 
 dnl === Load version info ====================================================
 
@@ -10,6 +10,13 @@ m4_define(d3_jetson_bsp_major, m4_argn(1, d3_jetson_bsp_list))
 m4_define(d3_jetson_bsp_minor, m4_argn(2, d3_jetson_bsp_list))
 m4_define(d3_jetson_bsp_patch, m4_argn(3, d3_jetson_bsp_list))
 m4_define(customer, m4_esyscmd_s([cat customer.txt]))
+
+dnl === Load up Linux Kernel version info ====================================
+
+m4_define(d3_linux_kernel_version, m4_esyscmd_s([cat kernel/kernel-*/Makefile | grep VERSION | head -n 1 | sed 's/.* = //g']))
+m4_define(d3_linux_kernel_patch, m4_esyscmd_s([cat kernel/kernel-*/Makefile | grep PATCHLEVEL | head -n 1 | sed 's/.* = //g']))
+m4_define(d3_linux_kernel_sublevel, m4_esyscmd_s([cat kernel/kernel-*/Makefile | grep SUBLEVEL | head -n 1 | sed 's/.* = //g']))
+m4_define(d3_linux_kernel_triplet, d3_linux_kernel_version.d3_linux_kernel_patch.d3_linux_kernel_sublevel)
 
 dnl === Basics ===============================================================
 
@@ -26,6 +33,9 @@ AC_DEFINE([D3_JETSON_BSP_MAJOR], d3_jetson_bsp_major, [Major Version])
 AC_DEFINE([D3_JETSON_BSP_MINOR], d3_jetson_bsp_minor, [Minor Version])
 AC_DEFINE([D3_JETSON_BSP_PATCH], d3_jetson_bsp_version_patch, [Patch Version])
 AC_DEFINE([D3_JETSON_BSP_VERSION], d3_jetson_bsp_triplet, [Version])
+
+AC_DEFINE([D3_LINUX_KERNEL_TRIPLET], d3_linux_kernel_triplet, [Linux Version Triplet])
+AC_SUBST([D3_LINUX_KERNEL_TRIPLET], d3_linux_kernel_triplet)
 
 AC_USE_SYSTEM_EXTENSIONS
 AM_PROG_AR
@@ -76,7 +86,7 @@ AC_ARG_WITH(
     [dtb],
     AS_HELP_STRING([--with-dtb=dtb-file], [specify dtb file for flash-dtb (use absolute path)]),
     [dtb_file=`realpath -q -m $withval`],
-    [dtb_file=`realpath -q -m .`/build/deploy/boot/d3-tx2-cic.dtb])
+    [dtb_file=`realpath -q -m .`/build/deploy/boot/d3-xavier-16x-fpdlink.dtb])
 
 AC_ARG_WITH(
     [kconfig],
@@ -106,7 +116,7 @@ AM_CONDITIONAL(NANO, false)
 AM_CONDITIONAL(NX, false)
 AC_ARG_WITH(
     [system-type],
-    AS_HELP_STRING([--with-system-type=system], [xavier, tx2, nano]),
+    AS_HELP_STRING([--with-system-type=system], [xavier, tx2, nx, nano]),
     [
         case "${withval}" in
           xavier)
@@ -135,9 +145,9 @@ AC_ARG_WITH(
     esac],
     [
         jv="jp_version"
-        AM_CONDITIONAL(TX2, true)
-        system_type=tx2
-        l4t_dir=`realpath ~/nvidia/nvidia_sdk/JetPack_${JP_VERSION}_Linux_JETSON_TX2/Linux_for_Tegra`
+        AM_CONDITIONAL(XAVIER, true)
+        system_type=xavier
+        l4t_dir=`realpath ~/nvidia/nvidia_sdk/JetPack_${JP_VERSION}_Linux_JETSON_AGX_XAVIER/Linux_for_Tegra`
     ])
 
 # Change the L4T directory from the one inferred by the system type if
@@ -220,6 +230,8 @@ AC_CONFIG_FILES([
     d3-jetson-util/target-overlay/boot/extlinux/extlinux.conf
     d3-jetson-util/Makefile
     doc/D3-Jetson-BSP-Release-Notes.md
+    scripts/target/extlinux.conf
+    supplemental/install-example
 ])
 AC_CONFIG_FILES(
     [bin/prep-new-system-from-host], [chmod +x bin/prep-new-system-from-host]
@@ -240,6 +252,7 @@ echo "Target Host      : $target_host"
 [ [ "$kconfig_file" ] ] && echo "Kernel config    : $kconfig_file"
 echo "DTB File         : $dtb_file"
 echo "L4T Directory    : $l4t_dir"
+echo "Linux Version    :" d3_linux_kernel_triplet
 echo -n "Username on tgt  : "
 AS_IF([test "$with_username"],
     [ echo "$with_username" ],

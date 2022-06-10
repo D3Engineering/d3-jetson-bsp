@@ -8,6 +8,7 @@ isp_symlinks()
         TARGET_OV10640="d3_${p}_ov10640.isp"
         TARGET_IMX390="d3_${p}_imx390.isp"
         TARGET_IMX390RCM="d3_${p}_imx390rcm.isp"
+        TARGET_IMX490FPD="d3_${p}_imx490fpd.isp"
 
         if ! [ -e "$TARGET_OV10640" ]; then
             ln -s ov10640.isp "$TARGET_OV10640"
@@ -18,27 +19,21 @@ isp_symlinks()
         if ! [ -e "$TARGET_IMX390RCM" ]; then
             ln -s imx390.isp "$TARGET_IMX390RCM"
         fi
+        if ! [ -e "$TARGET_IMX490FPD" ]; then
+            ln -s imx490.isp "$TARGET_IMX490FPD"
+        fi
     done
 }
-
-
-argus_enable_infinite_cam_timeout()
-{
-    # Add the environment variable in the Service section to enable
-    # infinite timeout mode for cameras to workaround issue #627
-    sed -i '/^\[Service\]$/ a Environment="enableCamInfiniteTimeout=1"' \
-        /etc/systemd/system/nvargus-daemon.service
-}
-
 
 echo 'Updating ISP overrides...'
 isp_symlinks
 
-echo 'Enabling Argus infinite camera timeout...'
-argus_enable_infinite_cam_timeout
-
-
 echo 'Updating boot logo...'
 dd if=/boot/boot-logo.blob of=/dev/disk/by-partlabel/BMP
 
+echo 'Updating libnvscf...'
+cp /usr/lib/aarch64-linux-gnu/tegra/libnvscf.so /usr/lib/aarch64-linux-gnu/tegra/libnvscf.so.backup
+cp /usr/lib/d3-jetson-utils/libnvscf.so /usr/lib/aarch64-linux-gnu/tegra/libnvscf.so
 
+echo 'Please select the appropriate DTB for the hardware you plan to use...'
+d3-install-dtb

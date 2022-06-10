@@ -3,8 +3,8 @@
 This guide will aid in first time bringup of a Jetson NX Xavier that is seated
 in the D3 12-Camera Carrier Board. This process may differ from previous Jetson
 products you have used. The D3 Carrier board features a
-different hardware layout from the Nvidia NX Devkit that causes it to require
-additional configuration from the host system after running Nvidia SDKManager.
+different hardware layout from the NVIDIA NX Devkit that causes it to require
+additional configuration from the host system after running NVIDIA SDKManager.
 
 
 ## 1. Power up the Board and Connect to Host System
@@ -42,21 +42,21 @@ To enter recovery, the process is similar to other Jetson products.
 
 ## 3. Flash the SoM Using SDKManager
 
-Open Nvidia SDKManager on the host, this can be downloaded for Ubuntu 16.04
-and 18.04 from Nvidia's website.
-When opening Nvidia SDKManager on the host system, the program will show the
+Open NVIDIA SDKManager on the host, this can be downloaded for Ubuntu 16.04
+and 18.04 from NVIDIA's website.
+When opening NVIDIA SDKManager on the host system, the program will show the
 option to select the type of SoM connected. If the SoM that has a
 micro SD slot on it, select the "Jetson NX Devkit" option. If the SoM does
 **not** have a micro SD slot, select the production "Jetson NX" option.
 
 When preparing the board for the first time, it is not recommended to
-install the additional Nvidia libraries. This can be set in "Step 2" of the
+install the additional NVIDIA libraries. This can be set in "Step 2" of the
 SDKManager wizard. These libraries can be installed later once the
 system is configured. *(See Appendix A. for more information)*
 
 ![Step 1 with Jetson selection dropdown shown.](./img/jetson-nx-sdkmanager-step1.png)
 
-![Step 2 with Nvidia libraries deselected.](./img/jetson-nx-sdkmanager-step2.png)
+![Step 2 with NVIDIA libraries deselected.](./img/jetson-nx-sdkmanager-step2.png)
 
 ## 4. Flash the DTB
 
@@ -139,9 +139,9 @@ Quad Fakra Connector: J15       J14       J13
                      9 |10     5 | 6     1 | 2
 ```
 
-## Appendix A. Nvidia Library Installation
+## Appendix A. NVIDIA Library Installation
 
-When installing Nvidia Libraries through SDKManager, it has been seen that
+When installing NVIDIA Libraries through SDKManager, it has been seen that
 there is inadequate space on eMMC SoMs. This will also be an issue if
 a 16GB SD Card is used on a micro SD SoM.
 
@@ -152,5 +152,5 @@ amount of packages that are installed and save storage space.
 Our `d3-build-tegra-media-api` script will install the correct version of the
 Tegra Multimedia API for your current release.
 
-If you wish to manually install Nvidia Libraries that are not installed by the
+If you wish to manually install NVIDIA Libraries that are not installed by the
 Tegra Multimedia API, we suggest using SDKManager.

@@ -20,6 +20,8 @@
 #define SER_PATH CONCAT_5(DES_PATH,/link@,DES_LINK,/,SER_NODE_NAME)
 #define DES_LINK_NODE CONCAT_3(DES_NODE,_link, DES_LINK)
 
+#define SER_GPIO_NODE CONCAT_3(SER_MODEL,_gpio_,PORT_IDX)
+
 &DES_LINK_NODE {
 	SER_NODE: SER_NODE_NAME {
 		compatible = "d3,ub953";
@@ -31,5 +33,13 @@
 		csi-lane-count = <4>;
 		csi-continuous-clock = <1>;
 		i2c-voltage-sel = <0x0>;
+
+		SER_GPIO_NODE: SER_GPIO_NODE {
+			compatible = "d3,ub953-gpio";
+			status = "okay";
+			gpio-controller;
+			#gpio-cells = <2>;
+			ngpios = <4>;
+		};
 	};
 };

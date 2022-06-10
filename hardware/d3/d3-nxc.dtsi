@@ -11,7 +11,7 @@
  * more details.
  */
 
-#include "../nvidia/platform/t19x/jakku/tegra194-p3668-all-p3509-0000.dts"
+#include "../nvidia/platform/t19x/jakku/kernel-dts/tegra194-p3668-all-p3509-0000.dts"
 
 / {
 	i2c@c240000 {

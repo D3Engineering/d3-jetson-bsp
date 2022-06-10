@@ -1,0 +1,195 @@
+/*
+ * Copyright (c) 2018-2021, D3 Engineering.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+#include "d3-xavier.dtsi"
+
+/ {
+
+    /* I2C_GP3, DT alias: i2c3 (clock: F53, data: E53) */
+    i2c@3180000 {
+
+        /* Microchip 24AA1026 (U26) */
+        eeprom@50 {
+            status = "okay";
+            compatible = "atmel,24c1024";
+            reg = <0x50>;
+            pagesize = <128>;
+        };
+
+        /* I2C GPIO expander PCAL9539A (U34) */
+        gpio_i2c_3_74: gpio@74 {
+            status = "okay";
+            compatible = "nxp,pca9539";
+            reg = <0x74>;
+            #gpio-cells = <2>;
+            gpio-controller;
+            vcc-supply = <&p2822_vdd_1v8_cvb>;
+        };
+
+        /* I2C GPIO expander PCAL9539A (U35) */
+        gpio_i2c_3_75: gpio@75 {
+            status = "okay";
+            compatible = "nxp,pca9539";
+            reg = <0x75>;
+            #gpio-cells = <2>;
+            gpio-controller;
+            vcc-supply = <&p2822_vdd_1v8_cvb>;
+        };
+
+        /* I2C GPIO expander PCAL9539A (U36) */
+        gpio_i2c_3_76: gpio@76 {
+            status = "okay";
+            compatible = "nxp,pca9539";
+            reg = <0x76>;
+            #gpio-cells = <2>;
+            gpio-controller;
+            vcc-supply = <&p2822_vdd_1v8_cvb>;
+        };
+
+        /* ub960 deserializers will be included here (U1, U4, U7, U10) */
+    };
+
+    /* I2C_GP2, DT alias: i2c2 (clock: J61, data: K61) */
+    i2c@c240000 {
+
+        /* I2C GPIO expander PCAL9539A (U37) */
+        gpio_i2c_2_77: gpio@77 {
+            status = "okay";
+            compatible = "nxp,pca9539";
+            reg = <0x77>;
+            #gpio-cells = <2>;
+            gpio-controller;
+            vcc-supply = <&p2822_vdd_1v8_cvb>;
+        };
+    };
+
+    fixed-regulators {
+        /* 1.1V regulator (U21) */
+        fpd_vdd_1v1: regulator@300 {
+            status = "okay";
+            reg = <0x12c>;
+            regulator-name = "fpd-1v1";
+            compatible = "regulator-fixed";
+            regulator-always-on;
+            regulator-min-microvolt = <1100000>;
+            regulator-max-microvolt = <1100000>;
+            vin-supply = <&p2822_vdd_1v8_cvb>;
+        };
+        /* J19: 1-2 = VDD_12V0, 2-3 = VDD_5V0 */
+        vdd_in_fpd: regulator@301 {
+            compatible = "regulator-fixed";
+            reg = <301>;
+            regulator-name = "vdd_in_fpd";
+            regulator-min-microvolt = <12000000>;
+            regulator-max-microvolt = <12000000>;
+        };
+
+        /* FPD-Link 0-3 regulator (U13) */
+        fpd_vdd_0_3: regulator@302 {
+            status = "okay";
+            reg = <302>;
+            regulator-name = "fpd_vdd_1_4";
+            compatible = "regulator-fixed";
+            enable-active-high;
+            regulator-always-on;
+            gpio = <&gpio_i2c_2_77 0 GPIO_ACTIVE_HIGH>;
+        };
+        /* FPD-Link 4-7 regulator (U16) */
+        fpd_vdd_4_7: regulator@303 {
+            status = "okay";
+            reg = <303>;
+            regulator-name = "fpd_vdd_5_8";
+            compatible = "regulator-fixed";
+            enable-active-high;
+            regulator-always-on;
+            gpio = <&gpio_i2c_2_77 3 GPIO_ACTIVE_HIGH>;
+        };
+        /* FPD-Link 8-11 regulator (U17) */
+        fpd_vdd_8_11: regulator@304 {
+            status = "okay";
+            reg = <304>;
+            regulator-name = "fpd_vdd_9_12";
+            compatible = "regulator-fixed";
+            enable-active-high;
+            regulator-always-on;
+            gpio = <&gpio_i2c_2_77 8 GPIO_ACTIVE_HIGH>;
+        };
+        /* FPD-Link 12-15 regulator (U20) */
+        fpd_vdd_12_15: regulator@305 {
+            status = "okay";
+            reg = <305>;
+            regulator-name = "fpd_vdd_13_16";
+            compatible = "regulator-fixed";
+            enable-active-high;
+            regulator-always-on;
+            gpio = <&gpio_i2c_2_77 11 GPIO_ACTIVE_HIGH>;
+        };
+    };
+    /* This is used by nvcamera-daemon (and probably the argus
+     * daemon). This is not needed if you only need v4l2. */
+    tegra-camera-platform {
+        compatible = "nvidia, tegra-camera-platform";
+
+        /**
+        * Physical settings to calculate max ISO BW
+        *
+        * num_csi_lanes = <>;
+        * Total number of CSI lanes when all cameras are active
+        *
+        * max_lane_speed = <>;
+        * Max lane speed in Kbit/s
+        *
+        * min_bits_per_pixel = <>;
+        * Min bits per pixel
+        *
+        * vi_peak_byte_per_pixel = <>;
+        * Max byte per pixel for the VI ISO case
+        *
+        * vi_bw_margin_pct = <>;
+        * Vi bandwidth margin in percentage
+        *
+        * max_pixel_rate = <>;
+        * Max pixel rate in Kpixel/s for the ISP ISO case
+        *
+        * isp_peak_byte_per_pixel = <>;
+        * Max byte per pixel for the ISP ISO case
+        *
+        * isp_bw_margin_pct = <>;
+        * Isp bandwidth margin in percentage
+        */
+        num_csi_lanes = <16>;
+        max_lane_speed = <1500000>;
+        min_bits_per_pixel = <10>;
+        /* max_pixel_rate = <222750>; */
+        /* max_pixel_rate = <445500>; */
+        max_pixel_rate = <750000>;
+
+        vi_peak_byte_per_pixel = <2>;
+        vi_bw_margin_pct = <25>;
+        isp_peak_byte_per_pixel = <5>;
+        isp_bw_margin_pct = <25>;
+    };
+};
+
+&vi_base {
+    num-channels = <16>;
+    vi_ports: ports {
+        #address-cells = <1>;
+        #size-cells = <0>;
+        /* ports will be included here */
+    };
+};
+
+&csi_base {
+    num-channels = <16>;
+    /* channels will be included here */
+};

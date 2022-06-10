@@ -19,20 +19,60 @@
  */
 #include <linux/module.h>
 #include <linux/of_device.h>
-/* Nvidia camera utility code */
-#include <media/camera_common.h>
+#include <linux/gpio/consumer.h>
 
 #include <d3/d3-jetson-bsp.h>
+#include <d3/common.h>
 
 #include <d3/ub960.h>
+#include <d3/ub953.h>
 
 #include "ov10640.h"
 #include "ov10640_reg.h"
 #include "ov10640_tables.h"
 #include "ov10640_ctrls.h"
 
-extern int ub953_set_frame_sync_enable(struct device *dev, bool enabled);
+#define OV10640_PATCH_VERSION "2"
+#define OV10640_PATCH_DESC "2020-10-06 - numerous debug enhancements"
 
+static int ov10640_combine_write(struct ov10640 *self);
+
+#ifdef CONFIG_D3_OV10640_DEBUG
+static const char *s_CHANNEL_NAMES[] = {
+	"PWL",
+	"LONG",
+	"SHORT",
+	"VERY SHORT",
+	"None - not overridden"
+};
+#endif /* CONFIG_D3_OV10640_DEBUG */
+
+
+
+#ifdef CONFIG_D3_OV10640_DEBUG
+static const char *s_HDRMODE_NAMES[] = {
+	"L-S-VS",
+	"L-S",
+	"L-VS",
+	"L",
+	"None - not overridden"
+};
+#endif /* CONFIG_D3_OV10640_DEBUG */
+
+
+static const char *s_NORMALIZATION_NAMES[] = {
+	"10",
+	"12",
+	"None - not overridden"
+};
+
+
+static const char *s_MODE_NAMES[] = {
+	"1280X1080_LONG",
+#ifdef CONFIG_D3_OV10640_HDR_ENABLE
+	"1280X1080_HDR",
+#endif /* CONFIG_D3_OV10640_HDR_ENABLE */
+};
 
 
 /**
@@ -43,6 +83,7 @@ extern int ub953_set_frame_sync_enable(struct device *dev, bool enabled);
 
 
  */
+
 
 /**
  * This is part of Nvidia camera_common framework. They create a file
@@ -86,8 +127,63 @@ static int ov10640_camera_write_reg(struct camera_common_data *s_data, u16 addr,
 }
 
 
+#ifdef CONFIG_D3_OV10640_DEBUG
+static int ov10640_hdrmode_set(struct ov10640 *self,
+			       enum ov10640_hdrmode hdr_mode)
+{
+	int err = 0;
+
+	if (hdr_mode >= OV10640_HDRMODE_ENDMARKER) {
+		dev_warn(self->dev, "invalid hdr mode: %u", hdr_mode);
+		return -EINVAL;
+	}
+
+
+	/* The two LSBs of the interface control register select which
+	 * exposures/channels to output.  */
+	dev_dbg(self->dev, "setting HDR mode to: %s", s_HDRMODE_NAMES[hdr_mode]);
+	TRY(err, regmap_update_bits(
+		    self->map,
+		    OV10640_REG_READ_MODE,
+		    OV10640_REG_READ_MODE_HDRMODE_MASK,
+		    OV10640_REG_READ_MODE_HDRMODE(hdr_mode)));
+
+	return 0;
+}
+#endif /* CONFIG_D3_OV10640_DEBUG */
+
+
+
+#ifdef CONFIG_D3_OV10640_DEBUG
+int ov10640_channel_set(struct ov10640 *self, enum ov10640_channel chan)
+{
+	int err = 0;
+
+	if (chan >= OV10640_CHANNEL_ENDMARKER) {
+		dev_warn(self->dev, "invalid channel id: %u", chan);
+		return -EINVAL;
+	}
+
+	/* The two LSBs of the interface control register select which
+	 * exposures/channels to output.  */
+	dev_dbg(self->dev, "setting channel to: %s (%#x=%#x) (mask=%#x)",
+		s_CHANNEL_NAMES[chan],
+		OV10640_REG_INTERFACE_CTRL,
+		chan,
+		OV10640_REG_INTERFACE_CTRL_DATAWIDTH_MASK);
+	TRY(err, regmap_update_bits(
+		    self->map,
+		    OV10640_REG_INTERFACE_CTRL,
+		    OV10640_REG_INTERFACE_CTRL_DATAWIDTH_MASK,
+		    OV10640_REG_INTERFACE_CTRL_DATAWIDTH(chan)));
+	return 0;
+}
+#endif /* CONFIG_D3_OV10640_DEBUG */
+
+
 /**
- * This is called to start the stream.
+ * This is called to start the stream. Currently this doesn't really
+ * do anything other than log start/stop.
  *
  * @param sd sub device
  * @param enable enable/disable stream
@@ -96,43 +192,41 @@ static int ov10640_camera_write_reg(struct camera_common_data *s_data, u16 addr,
  */
 static int ov10640_s_stream(struct v4l2_subdev *sd, int enable)
 {
-	struct i2c_client *client = NULL;
-	struct camera_common_data *s_data = NULL;
-	struct ov10640 *self = NULL;
-	int mode_ix = 0;
-	bool is_hdr = false;
-	struct i2c_client *parent_client = NULL;
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct camera_common_data *s_data = to_camera_common_data(&client->dev);
+	struct ov10640 *self = (struct ov10640 *)s_data->priv;
+	struct i2c_client *parent_client;
+#ifdef CONFIG_D3_OV10640_DEBUG
+	int err = 0;
+#endif /* CONFIG_D3_OV10640_DEBUG */
 
-	client = v4l2_get_subdevdata(sd);
+	int mode_ix = self->s_data->sensor_mode_id;
+	int is_hdr = ov10640_formats[mode_ix].hdr_en;
+
+	parent_client = of_find_i2c_device_by_node(client->dev.of_node->parent);
+	/* Check data is valid */
+	if (!parent_client) {
+		dev_err(self->dev, "could not find serializer node");
+		return -EINVAL;
+	}
 	if (!client) {
 		pr_err("no i2c client");
 		return -EINVAL;
 	}
-	s_data = to_camera_common_data(&client->dev);
 	if (!s_data) {
 		dev_err(&client->dev, "no camera_common_data");
 		return -EINVAL;
 	}
-	self = s_data->priv;
 	if (!self) {
-		dev_err(&client->dev, "no private data pinter");
+		dev_err(&client->dev, "no private data pointer");
 		return -EINVAL;
 	}
-	mode_ix = self->s_data->sensor_mode_id;
 	if ((mode_ix < 0)
 	    || (mode_ix >= ov10640_formats_len)) {
 		dev_err(self->dev, "mode_ix out of range, saw %d expected 0-%zu",
 			mode_ix, ov10640_formats_len);
 		return -EINVAL;
 	}
-	is_hdr = ov10640_formats[mode_ix].hdr_en;
-
-	parent_client = of_find_i2c_device_by_node(client->dev.of_node->parent);
-	if (!parent_client) {
-		dev_err(self->dev, "could not find serializer node");
-		return -EINVAL;
-	}
-
 
 	dev_dbg(self->dev, "mode: %d %s %s",
 		mode_ix,
@@ -145,30 +239,46 @@ static int ov10640_s_stream(struct v4l2_subdev *sd, int enable)
 
 
 	if (enable) {
-		regmap_multi_reg_write(
-			self->map,
-			mode_table[mode_ix].reg_sequence,
-			mode_table[mode_ix].size);
+		/* configure the sensor */
+		ov10640_test_pattern_set(self, self->test_pattern_is_enabled);
 		ov10640_hflip_set(self, self->hflip);
 		ov10640_vflip_set(self, self->vflip);
-		regmap_update_bits(
-			self->map,
-			OV10640_REG_SENSOR_CTRL,
-			OV10640_REG_SENSOR_CTRL_FSIN_EN_MASK,
-			OV10640_REG_SENSOR_CTRL_FSIN_EN(self->frame_sync_mode));
+		regmap_update_bits(self->map,
+				   OV10640_REG_SENSOR_CTRL,
+				   OV10640_REG_SENSOR_CTRL_FSIN_EN_MASK,
+				   OV10640_REG_SENSOR_CTRL_FSIN_EN(self->frame_sync_mode));
 
+#ifdef CONFIG_D3_OV10640_DEBUG
+		TRY(err, ov10640_channel_set(self, self->channel_select));
+		TRY(err, ov10640_hdrmode_set(self, self->hdr_mode));
+#endif /* CONFIG_D3_OV10640_DEBUG */
+
+		if (self->normalization_type != OV10640_NORMALIZATION_ENDMARKER) {
+			dev_dbg(self->dev, "setting normalization to: %s",
+				s_NORMALIZATION_NAMES[self->normalization_type]);
+			regmap_update_bits(
+				self->map,
+				OV10640_REG_NORMALIZATION_CTRL,
+				OV10640_REG_NORMALIZATION_MASK,
+				OV10640_REG_NORMALIZATION(self->normalization_type));
+
+		}
+
+		ov10640_combine_write(self);
 		regmap_multi_reg_write(self->map, mode_stream, mode_stream_len);
-
 		if (self->frame_sync_mode) {
-			/* It was tested above that parent_client is
-			 * valid if frame_sync is enabled. */
 			ub953_set_frame_sync_enable(&parent_client->dev, true);
 		}
+
 	} else {
-		ub953_set_frame_sync_enable(&parent_client->dev, false);
+		if (self->frame_sync_mode) {
+			ub953_set_frame_sync_enable(&parent_client->dev, false);
+		}
+
 		regmap_write(self->map, OV10640_REG_SOFTWARE_CTRL1,
 			     OV10640_REG_SOFTWARE_CTRL1_SW_STBY);
 	}
+	dev_dbg(self->dev, "exit");
 	return 0;
 }
 
@@ -243,7 +353,9 @@ static int ov10640_camera_power_on(struct camera_common_data *s_data)
 	struct ov10640 *priv = (struct ov10640 *)s_data->priv;
 	struct camera_common_power_rail *pw = &priv->power;
 	pw->state = SWITCH_ON;
+
 	return 0;
+
 }
 
 static int ov10640_camera_power_off(struct camera_common_data *s_data)
@@ -265,6 +377,7 @@ static struct camera_common_sensor_ops ov10640_common_ops = {
 	.write_reg = ov10640_camera_write_reg,
 	.read_reg  = ov10640_camera_read_reg,
 };
+
 
 static struct regmap_config ov10640_regmap_cfg = {
 	.reg_bits = 16,
@@ -386,6 +499,141 @@ static int ov10640_media_init(struct ov10640 *self)
 }
 
 
+static void ov10640_report(struct device *dev)
+{
+	dev_info(dev,
+		 "ov10640 v"D3_JETSON_BSP_VERSION "." OV10640_PATCH_VERSION
+		 " DRE=%d ", FIXED_EXPOSURE_RATIO * FIXED_EXPOSURE_RATIO);
+	dev_info(dev,
+		 "min HDR exposure should be %d in DTS",
+		 17 * FIXED_EXPOSURE_RATIO);
+	dev_dbg(dev, "release description: %s", OV10640_PATCH_DESC);
+}
+
+
+#ifdef CONFIG_D3_OV10640_DEBUG
+void ov10640_combine_dump(struct ov10640 *self, struct ov10640_combine *combine)
+{
+	int i;
+	dev_dbg(self->dev, "HDR combination dump:");
+
+	dev_dbg(self->dev, "ctrl=%#4x", combine->ctrl);
+
+	for (i=0; i<ARRAY_SIZE(combine->thresh); ++i) {
+		dev_dbg(self->dev, "thresh[%d]=%#x", i, combine->thresh[i]);
+	}
+
+	for (i=0; i<ARRAY_SIZE(combine->weight); ++i) {
+		dev_dbg(self->dev, "weight[%d]=%#x", i, combine->weight[i]);
+	}
+}
+#endif /* CONFIG_D3_OV10640_DEBUG */
+
+
+#ifdef CONFIG_D3_OV10640_DEBUG
+static int ov10640_channel_select_set_from_mode(struct ov10640 *self,
+						enum ov10640_mode mode)
+{
+	if (mode >= OV10640_MODE_ENDMARKER) {
+		dev_warn(self->dev, "invalid mode: %u", mode);
+		return -ENOENT;
+	}
+
+	switch(mode) {
+	case OV10640_MODE_1280X1080_HDR:
+		self->channel_select = OV10640_CHANNEL_PWL;
+		break;
+	case OV10640_MODE_1280X1080_LONG:
+	default:
+		self->channel_select = OV10640_CHANNEL_LONG;
+		break;
+	};
+
+	dev_dbg(self->dev, "set channel %s from mode %s",
+		s_CHANNEL_NAMES[self->channel_select], s_MODE_NAMES[mode]);
+	return 0;
+}
+#endif /* CONFIG_D3_OV10640_DEBUG */
+
+
+static int ov10640_sensor_mode_set(struct ov10640 *self, enum ov10640_mode mode)
+{
+	if (mode >= OV10640_MODE_ENDMARKER) {
+		dev_warn(self->dev, "invalid sensor mode %u", mode);
+		return -ENOENT;
+	}
+	dev_dbg(self->dev, "assigning mode %s", s_MODE_NAMES[mode]);
+	self->s_data->sensor_mode_id = mode;
+	self->s_data->mode = mode;
+	return 0;
+}
+
+
+static int ov10640_combine_write(struct ov10640 *self)
+{
+	int i;
+	int j;
+	u16 addr;
+	u8 val;
+	u8 shift;
+	u32 mask;
+	int err;
+	struct ov10640_combine *c = &self->combine;
+
+	/* The current configuration seems to be causing a yellow tint
+	 * in the L/S combination/threshold areas of the image. I'm
+	 * doing this early return to, effectively, revert to
+	 * defaults in the configuration tables. */
+	dev_warn(self->dev, "modification of combination registers disabled");
+	return 0;
+
+	dev_dbg(self->dev, "combine %#x=%#x", OV10640_REG_COMBINE_CTRL, c->ctrl);
+	TRY(err, regmap_write(self->map, OV10640_REG_COMBINE_CTRL, c->ctrl));
+
+	for (i=0; i<ARRAY_SIZE(c->thresh); ++i) {
+		dev_dbg(self->dev, "combine thresh %#x=%#x",
+			OV10640_REG_COMBINE_THRE_0 + i,
+			c->thresh[i]);
+		addr = OV10640_REG_COMBINE_THRE_0 + i;
+		TRY(err, regmap_write(self->map, addr, c->thresh[i]));
+	}
+
+	addr = OV10640_REG_COMBINE_WEIGHT_0;
+	for (i=0; i<ARRAY_SIZE(c->weight); ++i) {
+		for (j=0; j<4; ++j) {
+			mask = 0xff000000 >> (j*8);
+			shift = 24 - (j*8);
+			val = (c->weight[i] & mask) >> shift;
+			dev_dbg(self->dev, "combine weight %#x=%#x", addr, val);
+			regmap_write(self->map, addr, val);
+			++addr;
+		}
+	}
+	return 0;
+}
+
+static void ov10640_combine_init(struct ov10640_combine *combine)
+{
+	memset(combine, 0, sizeof(*combine));
+	/* Setting defaults from data sheet */
+	combine->ctrl = 0x3c;
+
+	/* These are the sensor defaults, apparently for 10 bit mode. */
+	/* combine->thresh[0] = 0x95; */
+	/* combine->thresh[1] = 0xa8; */
+	/* combine->thresh[2] = 0xaa; */
+
+	combine->thresh[0] = 0xb7;
+	combine->thresh[1] = 0xca;
+	combine->thresh[2] = 0xcc;
+
+	combine->weight[0] = 0x80806040;
+	combine->weight[1] = 0x80904020;
+	combine->weight[2] = 0x80600000;
+	combine->weight[3] = 0x80800000;
+}
+
+
 /**
  * This is called by the kernel when a new instance of the driver is
  * instantiated.
@@ -403,6 +651,8 @@ static int ov10640_probe(struct i2c_client *client,
 	struct ov10640 *self = NULL;
 	int tries;
 
+	ov10640_report(&client->dev);
+
 	dev_dbg(&client->dev, "probe enter");
 
 	TRY_MEM(common_data, devm_kzalloc(&client->dev, sizeof(*common_data),
@@ -410,6 +660,11 @@ static int ov10640_probe(struct i2c_client *client,
 	TRY_MEM(self, devm_kzalloc(&client->dev, sizeof(*self), GFP_KERNEL));
 	self->client = client;
 	self->dev = &client->dev;
+	self->normalization_type = OV10640_NORMALIZATION_ENDMARKER;
+	ov10640_combine_init(&self->combine);
+#ifdef CONFIG_D3_OV10640_DEBUG
+	ov10640_combine_dump(self, &self->combine);
+#endif /* CONFIG_D3_OV10640_DEBUG */
 
 	common_data->priv = self;
 	common_data->ops = &ov10640_common_ops;
@@ -434,26 +689,43 @@ static int ov10640_probe(struct i2c_client *client,
 	common_data->fmt_height = common_data->def_height;
 
 	self->s_data = common_data;
-	self->s_data->sensor_mode_id = OV10640_MODE_DEFAULT;
-	self->s_data->mode = OV10640_MODE_DEFAULT;
+	ov10640_sensor_mode_set(self, OV10640_MODE_DEFAULT);
+#ifdef CONFIG_D3_OV10640_DEBUG
+	ov10640_channel_select_set_from_mode(self, OV10640_MODE_DEFAULT);
+#endif /* CONFIG_D3_OV10640_DEBUG */
+
 	self->subdev = &common_data->subdev;
 	self->subdev->dev = self->dev;
 	self->s_data->dev = self->dev;
+
+	self->i2c_addressing_pin = gpiod_get_optional(self->dev, "i2c-addressing",
+			GPIOD_OUT_HIGH);
+
+	if (!self->i2c_addressing_pin) {
+		dev_dbg(self->dev, "No i2c address pin found, not required.");
+	} else {
+		gpiod_set_value_cansleep(self->i2c_addressing_pin, 0);
+	}
 
 	self->pdata = ov10640_parse_dt(self, common_data);
 	if (!self->pdata)
 		return -EFAULT;
 
-	TRY_MEM(self->map, devm_regmap_init_i2c(self->client, &ov10640_regmap_cfg));
-
+	TRY_MEM(self->map, devm_regmap_init_i2c(self->client,
+				&ov10640_regmap_cfg));
+	// The OV10640 imager in the RCM is paired with a MCU which acts as an
+	// I2C master to the imager. Multiple tries to write to the imager may
+	// be required if the MCU is also attempting to write to the imager.
 	for (tries = 50; --tries >= 0; ) {
-		/* regmap_write(self->map, OV10640_REG_SOFTWARE_CTRL2, */
-		/* 	     OV10640_REG_SOFTWARE_CTRL2_RESET); */
+		err = regmap_multi_reg_write(self->map,
+				mode_table[OV10640_MODE_DEFAULT].reg_sequence,
+				mode_table[OV10640_MODE_DEFAULT].size);
 
-		err = regmap_multi_reg_write(self->map, mode_table[OV10640_MODE_DEFAULT].reg_sequence, mode_table[OV10640_MODE_DEFAULT].size);
-
-		if (err >= 0)
-			err = regmap_write(self->map, OV10640_REG_SOFTWARE_CTRL1, OV10640_REG_SOFTWARE_CTRL1_SW_STBY);
+		if (err >= 0) {
+			err = regmap_write(self->map,
+					OV10640_REG_SOFTWARE_CTRL1,
+					OV10640_REG_SOFTWARE_CTRL1_SW_STBY);
+		}
 
 		if (err < 0) {
 			dev_dbg(self->dev, "Giving device more time to settle\n");

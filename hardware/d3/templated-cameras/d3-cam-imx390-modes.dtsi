@@ -1,5 +1,6 @@
 /*
- * Copyright (c) 2018-2019, D3 Engineering.  All rights reserved.
+ * Copyright (c) 2018-2020, D3 Engineering.  All rights reserved.
+ * By Christopher White, Greg Rowe, Mike Soltiz, Tyler Hart
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,14 +24,14 @@
 	csi_pixel_bit_depth = "12";			\
 	pixel_phase = "rggb";				\
 	active_w = "1936";				\
-	active_h = "1100";				\
+	active_h = "1096";				\
 	readout_orientation = "0";			\
 	inherent_gain = "1";				\
 	serdes_pix_clk_hz = "535000000";		\
 	pix_clk_hz = "148500000";			\
 	embedded_metadata_height = "1";			\
-	min_hdr_ratio = "1.737";			\
-	max_hdr_ratio = "1.737";			\
+	min_hdr_ratio = "64.0";				\
+	max_hdr_ratio = "64.0";				\
 	vc_id = STR(PORT_VCID)
 
 #ifdef IMX390_LINEAR_COMMON
@@ -73,19 +74,19 @@ mode3 {
 	IMX390_COMMON;
 	mode_type = "bayer_wdr_pwl";
 
-	/* 60 fps */
-	line_length = "2200";
+	line_length = "4400";
 
-	/* Gain is currently fixed in HDR mode */
-	min_gain_val = "0";
-	max_gain_val = "0";
+	/*HDR: Auto Exposure Mode #1 - allowing SP1_H analog gain from 8.4 to 24dB*/
+	min_gain_val = "8.4";
+	max_gain_val = "24";
 
-	min_framerate = "60";
-	max_framerate = "60";
+	min_framerate = "30";
+	max_framerate = "30";
 
 	/* Units are microseconds */
-	min_exp_time = "11000";
-	max_exp_time = "11000";
+	/*HDR: Auto Exposure Mode #1 - allowing exposure time to vary between 2 and 33 ms */
+	min_exp_time = "2000";
+	max_exp_time = "33000";
 
 	/* Xavier supports up to 20bpp, Tx2 supports up to 24bpp */
 	dynamic_pixel_bit_depth = "20";
@@ -93,21 +94,21 @@ mode3 {
 	num_control_point = "9";
 	control_point_x_0 = "0";
 	control_point_y_0 = "0";
-	control_point_x_1="474";
-	control_point_y_1="474";
-	control_point_x_2="1359";
-	control_point_y_2="916";
-	control_point_x_3="5226";
-	control_point_y_3="1752";
-	control_point_x_4="11006";
-	control_point_y_4="2290";
-	control_point_x_5="18490";
-	control_point_y_5="2574";
-	control_point_x_6="71038";
-	control_point_y_6="2767";
-	control_point_x_7="272927";
-	control_point_y_7="3140";
+	control_point_x_1="479";
+	control_point_y_1="479";
+	control_point_x_2="1438";
+	control_point_y_2="837";
+	control_point_x_3="4315";
+	control_point_y_3="1238";
+	control_point_x_4="12945";
+	control_point_y_4="1688";
+	control_point_x_5="38836";
+	control_point_y_5="2191";
+	control_point_x_6="116508";
+	control_point_y_6="2755";
+	control_point_x_7="349525";
+	control_point_y_7="3387";
 	control_point_x_8="1048575";
-	control_point_y_8="3855";
+	control_point_y_8="4095";
 };
 #endif	/* D3_IMX390_HDR_ENABLE */

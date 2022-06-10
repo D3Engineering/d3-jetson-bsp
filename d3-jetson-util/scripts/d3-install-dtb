@@ -4,16 +4,7 @@
 # This will show all dtbs in /usr/lib/(selected kernel)/ that do not start with
 # "tegra". "tegra*" dtbs are assumed to be from Nvidia.
 #
-# Copyright (c) 2019, D3 Engineering.  All rights reserved.
-#
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; version 2 of the License.
-#
-# This program is distributed in the hope that it will be useful, but WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
-# more details.
+# Copyright (c) 2019-2020, D3 Engineering.  All rights reserved.
 
 set -o errexit
 set -o pipefail
@@ -43,6 +34,7 @@ cd "$DTB_DIR" # cd for the sake of select output
 IFS=,
 declare -a DTB_ARR_RAW
 declare -a DTB_ARR
+declare -a DTB_ARR_UNENCRYPT
 
 # Text between 'DESC' markers is the names of the products that each
 # DTB corresponds to
@@ -57,8 +49,10 @@ fi
 
 for file in "${files[@]}" ; do
     DTB_ARR_RAW+=("$file")
+    unencrypt=$(sed -E 's/\.encrypt$|_sigheader//g' <<<"$file")
+    DTB_ARR_UNENCRYPT+=("$unencrypt")
     DTB_ARR+=("$(strings < "$file" | grep -P 'DESC<[^>]+>DESC' \
-       | sed 's/[>]*DESC[<]*//g') ($(sed -E 's/^\.\/|\.encrypt$|_sigheader//g' <<<"$file"))")
+	    | sed 's/[>]*DESC[<]*//g') ($(sed -E 's/^\.\///g' <<<"$unencrypt"))")
 done
 
 pr "Choose a dtb to install"
@@ -67,9 +61,9 @@ select DTB in "${DTB_ARR[@]}"; do
     pr "Select a valid signed dtb"
 done
 
-selected="${DTB_ARR_RAW[$REPLY-1]}"
-if sudo dd if="$selected" of="/dev/disk/by-partlabel/kernel-dtb"; then
-    echo -e "[d3-install-dtb] \e[32mkernel-dtb has been flashed! (file $selected)\e[39m"
+selected="${DTB_ARR_UNENCRYPT[$REPLY-1]}"
+if ln -f "$selected" /boot/active-dtb; then
+    echo -e "[d3-install-dtb] \e[32mkernel-dtb has been selected! (file $selected)\e[39m"
 else
-    echo -e "[d3-install-dtb] \e[31mdd has failed to write dtb!\e[39m"
+    echo -e "[d3-install-dtb] \e[31mfailed to link dtb! (file $selected)\e[39m"
 fi

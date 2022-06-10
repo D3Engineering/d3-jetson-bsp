@@ -22,15 +22,11 @@
 
 #include <media/camera_common.h>
 #ifdef CONFIG_D3_IMX390_HDR_ENABLE
-#	include "imx390-mode-1936x1100-HDR.h"
+#	include "imx390-mode-1936x1096-HDR.h"
 #endif	/* CONFIG_D3_IMX390_HDR_ENABLE */
-#include "imx390-mode-1936x1100-SP1L.h"
-#include "imx390-mode-1936x1100-SP1H.h"
-#include "imx390-mode-1936x1100-SP2.h"
-#include "imx390-mode-1936x1100-SP1L-2LANE.h"
-#include "imx390-mode-1936x1100-SP1H-2LANE.h"
-#include "imx390-mode-1936x1100-SP2-2LANE.h"
-
+#include "imx390-mode-1936x1096-SP1L.h"
+#include "imx390-mode-1936x1096-SP1H.h"
+#include "imx390-mode-1936x1096-SP2.h"
 
 enum imx390_mode {
 	IMX390_MODE_SP1L,
@@ -51,9 +47,6 @@ struct imx390_modes_map {
 
 extern struct imx390_modes_map imx390_modes_map[];
 extern const size_t imx390_modes_map_len;
-
-extern struct imx390_modes_map imx390_2lane_modes_map[];
-extern const size_t imx390_2lane_modes_map_len;
 
 extern const struct camera_common_frmfmt imx390_modes_formats[];
 extern const size_t imx390_modes_formats_len;

@@ -1,0 +1,97 @@
+/*
+ * Copyright (c) 2018-2021, D3 Engineering.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+#ifdef IMX490_COMMON
+#	undef IMX490_COMMON
+#endif
+
+#define IMX490_COMMON                                                   \
+	mclk_multiplier = "9"; /* deprecated, but sensor_dt_compliance test fails without it */ \
+	mclk_khz = "25000";						\
+	num_lanes = STR(CSI_LANES);					\
+	tegra_sinterface = STR(TEGRA_SINTERFACE);			\
+	discontinuous_clk = "no";					\
+	dpcm_enable = "false";						\
+	cil_settletime = "0";						\
+	csi_pixel_bit_depth = "12";					\
+	pixel_phase = "rggb";						\
+	readout_orientation = "0";					\
+	serdes_pix_clk_hz = "535000000";				\
+	embedded_metadata_height = "0";					\
+	framerate_factor = "1";						\
+	step_framerate = "1";						\
+	line_length = "3000";						\
+	pix_clk_hz = "179642870";					\
+	exposure_factor =  "1000000";					\
+	step_exp_time = "33";						\
+	min_exp_time = "33"; /* us */					\
+	max_exp_time = "20000"; /* us */				\
+	default_exp_time = "9000"; /* us */				\
+	inherent_gain = "1";						\
+	use_decibel_gain = "true";					\
+	gain_factor   = "1000000";					\
+	step_gain_val = "333333";					\
+	min_gain_val  = "4200000";					\
+	max_gain_val  = "30000000";					\
+	default_gain  = "4200000";					\
+	min_framerate = "30";						\
+	max_framerate = "30";						\
+	default_framerate = "30"
+
+
+
+/* HDR */
+mode0 {
+	IMX490_COMMON;
+	mode_type = "bayer_wdr_pwl";
+	active_w = "2880";
+	/* active_h = "1864"; */
+	active_h = "1860";
+
+	/* Xavier supports up to 20bpp, Tx2 supports up to 24bpp */
+	dynamic_pixel_bit_depth = "20";
+	min_hdr_ratio = "64.0";
+	max_hdr_ratio = "64.0";
+
+	/* Xavier supports up to 9 control points. */
+	num_control_point = "9";
+	control_point_x_0 = "0";
+	control_point_y_0 = "0";
+	control_point_x_1="800";
+	control_point_y_1="400";
+	control_point_x_2="1600";
+	control_point_y_2="600";
+	control_point_x_3="4400";
+	control_point_y_3="950";
+	control_point_x_4="13000";
+	control_point_y_4="1380";
+	control_point_x_5="40000";
+	control_point_y_5="1920";
+	control_point_x_6="120000";
+	control_point_y_6="2545";
+	control_point_x_7="350080";
+	control_point_y_7="3264";
+	control_point_x_8="1048576";
+	control_point_y_8="4080";
+};
+
+/* SP1L - sub-pixel 1, low gain conversion */
+mode1 {
+	IMX490_COMMON;
+	mode_type = "bayer";
+	active_w = "2880";
+	active_h = "1860";
+	dynamic_pixel_bit_depth = "12";
+	num_control_point = "0";
+	min_hdr_ratio = "1.737";
+	max_hdr_ratio = "1.737";
+};

@@ -24,9 +24,23 @@
 &csi_base {
 	num-channels = <12>;
 };
-
+/{
+	gpio@c2f0000
+	{
+		/delete-node/ w-disable1;
+	};
+};
 /{
 	fixed-regulators {
+		p3509_vdd_usb2_5v: regulator@114 {
+			compatible = "regulator-fixed";
+			reg = <114>;
+			regulator-name = "vdd-usb2-5v";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			gpio = <&tegra_aon_gpio TEGRA194_AON_GPIO(CC, 2) GPIO_ACTIVE_HIGH>;
+			enable-active-high;
+		};
 		m2m_vdd: regulator@400 {
 			status = "okay";
 			reg = <0x190>;
@@ -35,6 +49,7 @@
 			regulator-always-on;
 			gpio = <&nxc_fg 131 GPIO_ACTIVE_LOW>;
 			enable-active-high;
+			regulator-boot-on;
 
 		};
 		m2e_vdd: regulator@401 {
@@ -45,6 +60,7 @@
 			regulator-always-on;
 			gpio = <&nxc_fg 133 GPIO_ACTIVE_LOW>;
 			enable-active-high;
+			regulator-boot-on;
 
 		};
 		i2c_mux_rst: regulator@402 {
@@ -204,6 +220,17 @@
 			regulator-always-on;
 			gpio = <&nxc_fg 69 GPIO_ACTIVE_LOW>;
 			enable-active-high;
+		};
+	};
+};
+/{
+	xusb_padctl@3520000 {
+		ports {
+			usb2-2 {
+				mode = "host";
+				vbus-supply = <&p3509_vdd_usb2_5v>;
+				status = "okay";
+			};
 		};
 	};
 };

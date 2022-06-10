@@ -4,7 +4,7 @@ The overlay-loader plugin runs early during the init process of our kernel.
 It looks for nodes in /overlay-loader/ in the device tree. These overlays can
 be activated using kernel parameter `active_overlays=name_name_1,node_name_2`.
 Our nodes follow the convention `[camera model]_[port_index]`. Thus a mix of
-cams on RSP may look like `active_overlays=imx390_0,ov10640_1,vg6768_2`.
+cams on RSP may look like `active_overlays=imx390_0,ov10640_1`.
 
 overlay-loader has very verbose output. This can be seen by searching for
 "overlay-loader" in dmesg. It will log all the params that it matched and
@@ -45,9 +45,9 @@ is required for a new one.
 
 # Important notes
 
-CIC is a deviation from this pattern, its deserializers are hard coded in
-d3-[board]-cic.dtsi because it only has 1 of each deserializer. It doesn't
-need templates.
+The 6ch SerDes Interface card is a deviation from this pattern, its
+deserializers are hard coded in d3-[board]-6x-serdes.dtsi because it only has 1
+of each deserializer. It doesn't need templates.
 
 All overlays are currently created by the camera templates using the include
 `d3-overlays-cam.dtsi`. The overlay DTSI file is included by a camera-specific
