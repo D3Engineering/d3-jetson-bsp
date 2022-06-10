@@ -12,6 +12,7 @@ config.status
 configure
 install-sh
 missing
+supplemental/install-example
 bin/kernel-deb
 d3-jetson-util/debian/changelog
 d3-jetson-util/target-overlay/boot/extlinux/extlinux.conf
@@ -20,3 +21,8 @@ hardware/d3/d3-jetson-bsp-version.dtsi
 kernel/d3/include/d3/d3-jetson-bsp.h
 bin/prep-new-system-from-host
 d3-jetson-util/debian/preinst
+
+# This is auto generated
+scripts/target/extlinux.conf
+
+
