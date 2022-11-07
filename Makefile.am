@@ -28,15 +28,15 @@ EOL =
 
 LINUX_BUILD_CONFIG=@LINUX_BUILD_PATH@/.config
 D3_DEFAULT_CONFIG=kernel/d3/d3_defconfig
-linux_ZIMAGE=@LINUX_BUILD_PATH@/arch/arm64/boot/zImage
 linux_IMAGE=@LINUX_BUILD_PATH@/arch/arm64/boot/Image
 linux_SIGNED_IMAGE=@DEPLOY_BUILD_PATH@/boot/boot_sigheader.img.encrypt
+TEGRAFLASH_LOCAL_PATH=@TOP_BUILD_PATH@/tegraflash
+TEGRAFLASH_PATH=@L4TDIR@/bootloader/
 
 
 PDIR="@TOP_BUILD_PATH@"
 LVERS=@D3_JETSON_BSP_VERSION@-@CUSTOMER@
 LINUX_PACKAGE_FILES=\
-	$(PDIR)/linux-firmware-image-@D3_LINUX_KERNEL_TRIPLET@+$(LVERS)+_1_arm64.deb \
 	$(PDIR)/linux-headers-@D3_LINUX_KERNEL_TRIPLET@+$(LVERS)+_1_arm64.deb \
 	$(PDIR)/linux-image-@D3_LINUX_KERNEL_TRIPLET@+$(LVERS)+_1_arm64.deb \
 	$(PDIR)/linux-libc-dev_1_arm64.deb
@@ -52,9 +52,8 @@ RSYNC_OPTS=-ar -H --exclude=.git --no-owner --no-group $(if $V,--progress)
 # Filename of the deb for d3-jetson-util.  Cannot be changed
 UTIL_PACKAGE_FILE=d3-jetson-util_@VERSION_NAME@-1_arm64.deb
 HASH_FILE=d3-jetson-bsp-bin-@VERSION_NAME@.sha1
-DTB_BUILD_PATH=@LINUX_BUILD_PATH@/arch/arm64/boot/dts/
+DTB_BUILD_PATH=@LINUX_BUILD_PATH@/arch/arm64/boot/dts/nvidia/
 NVLIBS_PATH=debug/nvlibs
-BOOT_LOGO_FILE=d3-jetson-util/target-overlay/boot/boot-logo.blob
 TARGET_NVLIBS_PATH=/usr/lib/aarch64-linux-gnu/tegra/
 
 # Custom kernel configuration
@@ -66,14 +65,14 @@ SIGNED_DTB=$(DEPLOY_BUILD_PATH)/boot/$(patsubst %.dtb,%_sigheader.dtb.encrypt,$(
 # Chip ID passed into Tegra flash tools when signing DTB
 if XAVIER
 FLASH_CHIP_ID=0x19
-SYNC_TARGETS=sync-modules sync-boot sync-logo sync-nvlibs sync-debug sync-kernel
+SYNC_TARGETS=sync-modules sync-boot sync-nvlibs sync-debug sync-kernel
 else
 if NX
 FLASH_CHIP_ID=0x19
-SYNC_TARGETS=sync-modules sync-boot sync-logo sync-nvlibs sync-debug
+SYNC_TARGETS=sync-modules sync-boot sync-nvlibs sync-debug
 else
 FLASH_CHIP_ID=0x18
-SYNC_TARGETS=sync-modules sync-boot sync-logo sync-nvlibs sync-debug
+SYNC_TARGETS=sync-modules sync-boot sync-nvlibs sync-debug
 endif
 endif
 
@@ -137,7 +136,6 @@ define HELP_TEXT
 	sync-modules    - rsyncs kernel modules to target
 	sync-nvlibs     - copies nvidia libraries that have been modified from release to target
 	sync-dtb        - copies signed dtb to device and writes it to the kernel-dtb partition
-	sync-logo       - copies boot logo to device and writes it to the BMP partition
 	flash-dtb       - flashes dtb to target via USB (device in recovery mode)
 	flash-kernel    - (Xavier only) flashes kernel to target via USB (device in recovery mode)
 	linux-defconfig - prepares kernel with default D3 configuration
@@ -259,6 +257,9 @@ linux-menuconfig:
 
 linux-clean:
 	$(v)+$(KCONFIG_ASSIGNMENT) $(MAKE) @LINUX_ARGS@ clean
+	@# FIRE_HAZARD: Nvidia Display Driver
+	$(v)+$(KCONFIG_ASSIGNMENT) $(MAKE) \
+		-C $(abs_srcdir)/@NVIDIA_DISPLAY_DRIVER_DIR@ SYSSRC=@KERNEL_DIR@ clean
 
 # Common args we use in both _compile_kernel and kernel-bindeb-pkg
 basic_kernel_compilation_args = \
@@ -268,16 +269,24 @@ basic_kernel_compilation_args = \
 
 # Just compile the kernel.  Provided for use by Makefiles in /mk .
 _compile_kernel:
+	@# Kernel and in-tree modules
 	$(v)+$(KCONFIG_ASSIGNMENT) $(MAKE) \
 		$(basic_kernel_compilation_args) \
 		$(if ${COMPILE_KERNEL_ARGS}, \
 			${COMPILE_KERNEL_ARGS}, \
-			 zImage Image modules dtbs)
+			 Image modules dtbs)
+	@# Out-of tree modules
+	@# FIRE_HAZARD: Nvidia Display Driver
+	@# (see: https://forums.developer.nvidia.com/t/display-doesnt-work-with-custom-kernel/219424)
+	$(v)+$(KCONFIG_ASSIGNMENT) $(MAKE) \
+		-C $(abs_srcdir)/@NVIDIA_DISPLAY_DRIVER_DIR@ \
+		TARGET_ARCH=aarch64 ARCH=arm64 CC=@LINUX_CROSS_TOOL_PREFIX@gcc LD=@LINUX_CROSS_TOOL_PREFIX@ld AR=@LINUX_CROSS_TOOL_PREFIX@ar CXX=@LINUX_CROSS_TOOL_PREFIX@g++ OBJCOPY=@LINUX_CROSS_TOOL_PREFIX@objcopy \
+		SYSSRC=@KERNEL_DIR@ SYSOUT=@LINUX_BUILD_PATH@ $(if ${COMPILE_KERNEL_ARGS}, ${COMPILE_KERNEL_ARGS}, modules)
 
 $(LINUX_BUILD_CONFIG): $(D3_BUILD_CONFIG)
 	$(v)+$(KCONFIG_ASSIGNMENT) $(MAKE) @LINUX_ARGS@ d3_defconfig \
 		$(if ${MIK_ARGS}, ${MIK_ARGS}, CFLAGS_build-id.o=-DD3_JETSON_BSP_BUILDID='\"$(D3_JETSON_BSP_BUILDID)\"' -DD3_JETSON_BSP_COMMIT_HASH='\"$(D3_JETSON_BSP_COMMIT_HASH)\"') \
-		$(if ${MIK_TGT}, ${MIK_TGT}, zImage Image modules dtbs)
+		$(if ${MIK_TGT}, ${MIK_TGT}, Image modules dtbs)
 
 # Make a kernel package (and build the kernel if necessary).  The package name
 # includes the kernel version, BSP version, and customer.
@@ -288,6 +297,8 @@ kernel-bindeb-pkg: deploy
 	$(v)rm -f "@TOP_BUILD_PATH@"/*.deb "@TOP_BUILD_PATH@"/*.changes
 	$(v)+$(KCONFIG_ASSIGNMENT) $(MAKE) $(basic_kernel_compilation_args) \
 		L4TDIR="@L4TDIR@" \
+		TEGRAFLASH_LOCAL_PATH="$(TEGRAFLASH_LOCAL_PATH)" \
+		NVIDIA_DISPLAY_DRIVER_DIR="$(abs_srcdir)/@NVIDIA_DISPLAY_DRIVER_DIR@" \
 		KBUILD_PKG_ROOTCMD='fakeroot' \
 		BUILDDEB_NO_DEBUG_PACKAGE=y \
 		LOCALVERSION="+@D3_JETSON_BSP_VERSION@-@CUSTOMER@+" KDEB_PKGVERSION="1"\
@@ -299,9 +310,8 @@ kernel-bindeb-pkg: deploy
 # Populate build/deploy - internal target.  Don't need to install SIGNED_DTB
 # since it's already in @DEPLOY_BUILD_PATH@.
 _populate_deploy:
-	$(v)install -D "$(linux_ZIMAGE)" "@DEPLOY_BUILD_PATH@/boot/d3-zImage"
 	$(v)install -D "$(linux_IMAGE)" "@DEPLOY_BUILD_PATH@/boot/d3-Image"
-	$(v)install -D @LINUX_BUILD_PATH@/arch/arm64/boot/dts/*.dtb "@DEPLOY_BUILD_PATH@/boot/"
+	$(v)install -D @LINUX_BUILD_PATH@/arch/arm64/boot/dts/nvidia/*.dtb "@DEPLOY_BUILD_PATH@/boot/"
 	$(v)ln -f @DTB_FILE@ "@DEPLOY_BUILD_PATH@/boot/active-dtb" # Create hardlink to the DTB we want -- so extlinux.conf doesn't need to change
 	@# Make sure the D3 drivers actually made it into the compiled kernel.
 	@# Use the build-id driver as a proxy for all our drivers.
@@ -322,7 +332,11 @@ deploy: $(LINUX_BUILD_CONFIG)
 	@# Build!
 	$(v)+$(KCONFIG_ASSIGNMENT) $(MAKE) _compile_kernel
 	$(v)+$(KCONFIG_ASSIGNMENT) $(MAKE) sign-dtb
-	$(v)+$(KCONFIG_ASSIGNMENT) $(MAKE) @LINUX_ARGS@ modules_install headers_install firmware_install
+	$(v)+$(KCONFIG_ASSIGNMENT) $(MAKE) @LINUX_ARGS@ modules_install headers_install
+	@# FIRE_HAZARD: Nvidia Display Driver (Orin only)
+	$(v)+$(KCONFIG_ASSIGNMENT) $(MAKE) \
+		-C $(abs_srcdir)/@NVIDIA_DISPLAY_DRIVER_DIR@ \
+		SYSSRC=@KERNEL_DIR@ SYSOUT=@LINUX_BUILD_PATH@ INSTALL_MOD_PATH=@DEPLOY_BUILD_PATH@ modules_install
 	$(v)+$(KCONFIG_ASSIGNMENT) $(MAKE) _populate_deploy
 	$(vecho) '[$@] complete - build ID $(D3_JETSON_BSP_BUILDID), hash $(D3_JETSON_BSP_COMMIT_HASH))'
 
@@ -347,10 +361,6 @@ sync-debug:
 	$(v)rsync scripts/target/ @USERNAME_AT@@TARGET_HOST@:debug/ $(RSYNC_OPTS)
 	$(vecho) "SYNC     d3-jetson-util/scripts/"
 	$(v)rsync d3-jetson-util/scripts/ @USERNAME_AT@@TARGET_HOST@:debug/util/ $(RSYNC_OPTS)
-	$(vecho) "SYNC     d3-jetson-util/target-overlay/var/nvidia/nvcam/settings/"
-	$(v)rsync d3-jetson-util/target-overlay/var/nvidia/nvcam/settings/ @USERNAME_AT@@TARGET_HOST@:/var/nvidia/nvcam/settings/ $(RSYNC_OPTS)
-	$(v)ssh @USERNAME_SSH@ @TARGET_HOST@ sudo chown root:root /var/nvidia/nvcam/settings/*.isp
-
 
 
 sync-boot:
@@ -371,11 +381,6 @@ sync-nvlibs:
 	$(v)if [ -e "$(NVLIBS_PATH)" ]; then scp @USERNAME_SCP@ "$(NVLIBS_PATH)"/* $(TARGET_HOST):"$(TARGET_NVLIBS_PATH)"; fi
 	$(v)ssh @USERNAME_SSH@ @TARGET_HOST@ sync
 
-sync-logo: $(BOOT_LOGO_FILE)
-	$(vecho) "SYNC     $<"
-	$(v)scp @USERNAME_SCP@ $< $(TARGET_HOST):debug/boot-logo.blob
-	$(v)ssh @USERNAME_SSH@ @TARGET_HOST@ 'sudo dd if=debug/boot-logo.blob of=/dev/disk/by-partlabel/BMP && sync' $(suppress_unless_v)
-
 sync: $(SYNC_TARGETS)
 	$(v)echo "Run 'make reboot' when ready"
 
@@ -383,28 +388,42 @@ sync: $(SYNC_TARGETS)
 %.dtb:
 	$(v)+$(KCONFIG_ASSIGNMENT) $(MAKE) @LINUX_ARGS@ dtbs
 
-$(DEPLOY_BUILD_PATH)/boot/%_sigheader.dtb.encrypt: $(DTB_BUILD_PATH)/%.dtb
+$(DEPLOY_BUILD_PATH)/boot/%_sigheader.dtb.encrypt: $(DTB_BUILD_PATH)/%.dtb $(TEGRAFLASH_LOCAL_PATH)
 	$(vecho) "SIGN      $<"
 	@: # Check for existence of unsigned DTB.  Prints if not found.
 	$(v)stat "$<" >/dev/null
 	$(v)cd $(DEPLOY_BUILD_PATH)/boot; \
-		@L4TDIR@/bootloader/tegraflash.py --chip $(FLASH_CHIP_ID) \
+		$(TEGRAFLASH_LOCAL_PATH)/tegraflash.py --chip $(FLASH_CHIP_ID) \
 		--cmd "sign $<" --skipuid $(suppress_unless_v)
 
 sign-dtb: $(SIGNED_DTB)
 
 
-if XAVIER
+if TEGRAFLASH
 
+# Hack together a little temporary play-pen for tegraflash and its associated
+# scripts to romp around and run amok. Otherwise, simultaneous builds on the
+# build server could interfere with each other.
+$(TEGRAFLASH_LOCAL_PATH):
+	$(v)mkdir -p $(TEGRAFLASH_LOCAL_PATH)
+	$(v)cp -r $(TEGRAFLASH_PATH)/pyfdt/ $(TEGRAFLASH_LOCAL_PATH)
+	$(v)cp $(TEGRAFLASH_PATH)/tegraflash_impl_t234.py $(TEGRAFLASH_LOCAL_PATH)
+	$(v)cp $(TEGRAFLASH_PATH)/tegraflash_internal.py $(TEGRAFLASH_LOCAL_PATH)
+	$(v)cp $(TEGRAFLASH_PATH)/tegraflash.py $(TEGRAFLASH_LOCAL_PATH)
+	$(v)cp $(TEGRAFLASH_PATH)/tegrahost_v2 $(TEGRAFLASH_LOCAL_PATH)
+	$(v)cp $(TEGRAFLASH_PATH)/tegraopenssl $(TEGRAFLASH_LOCAL_PATH)
+	$(v)cp $(TEGRAFLASH_PATH)/tegrasign_v3_internal.py $(TEGRAFLASH_LOCAL_PATH)
+	$(v)cp $(TEGRAFLASH_PATH)/tegrasign_v3.py $(TEGRAFLASH_LOCAL_PATH)
+	$(v)cp $(TEGRAFLASH_PATH)/tegrasign_v3_util.py $(TEGRAFLASH_LOCAL_PATH)
 
 # TODO: use the flash.sh configuration files to get $INITRD_IN_BOOTIMG
 # and $INITRD, and use them in the below.  (See flash.sh output with set -x)
-$(linux_SIGNED_IMAGE): $(linux_IMAGE)
+$(linux_SIGNED_IMAGE): $(linux_IMAGE) $(TEGRAFLASH_LOCAL_PATH)
 	$(vecho) "SIGN     $(linux_IMAGE)"
 	$(v)cd @L4TDIR@/bootloader; \
 		./mkbootimg --kernel $(linux_IMAGE) --ramdisk l4t_initrd.img --board mmcblk0p1 --output $(DEPLOY_BUILD_PATH)/boot/boot.img;
 	$(v)cd $(DEPLOY_BUILD_PATH)/boot; \
-		@L4TDIR@/bootloader/tegraflash.py --chip $(FLASH_CHIP_ID) \
+		$(TEGRAFLASH_LOCAL_PATH)/tegraflash.py --chip $(FLASH_CHIP_ID) \
 		--cmd "sign boot.img" --skipuid $(suppress_unless_v) ;
 
 sign-kernel: $(linux_SIGNED_IMAGE)

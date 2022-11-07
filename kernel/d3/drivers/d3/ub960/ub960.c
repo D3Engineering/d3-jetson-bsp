@@ -26,6 +26,7 @@
 #include <linux/delay.h>
 #include <linux/of_irq.h>
 #include <linux/interrupt.h>
+#include <linux/i2c.h>
 
 #include <d3/d3-jetson-bsp.h>
 
@@ -442,6 +443,7 @@ struct ub960 {
 	unsigned long lock_timeout;
 	unsigned long status_period;
 	unsigned long status_count;
+	unsigned int active_streams;
 
 	struct regulator *avdd_reg;
 	struct regulator *iovdd_reg;
@@ -467,16 +469,35 @@ int ub960_s_stream(struct i2c_client *self_in,
 {
 	int err = 0;
 	struct ub960 *self = i2c_get_clientdata(self_in);
+	struct mutex *lock = &self->indirect_access_lock;
 
-	/* nothing to do for enable */
+
+	/* increment active number of streams when starting a new stream */
 	if (enable) {
+		mutex_lock(lock);
+		++(self->active_streams);
+		mutex_unlock(lock);
+		dev_dbg(self->dev, "%s started a new stream; "
+				"%d active streams", src->dev.driver->name,
+				self->active_streams);
 		return 0;
 	}
-
-	dev_dbg(self->dev, "%s notified end-of-stream,"
-		" performing digital reset", src->dev.driver->name);
-	TRY(err, regmap_write(self->map, UB960_REG_RESET_CTL, 0x01));
-	usleep_range(3 * 1000, 4 * 1000);
+	/* decrement number of streams on disable */
+	else {
+		mutex_lock(lock);
+		--(self->active_streams);
+		dev_dbg(self->dev, "%s stopped a stream; "
+				"%d active streams", src->dev.driver->name,
+				self->active_streams);
+		/* only reset if there are no active streams running */
+		if (self->active_streams == 0) {
+			dev_dbg(self->dev, "%s notified end-of-stream,"
+				" performing digital reset", src->dev.driver->name);
+			TRY(err, regmap_write(self->map, UB960_REG_RESET_CTL, 0x01));
+			usleep_range(3 * 1000, 4 * 1000);
+		}
+		mutex_unlock(lock);
+	}
 	return err;
 }
 EXPORT_SYMBOL_GPL(ub960_s_stream);
@@ -910,6 +931,13 @@ static int ub960_chan_start(struct ub960 *self, u8 chan_id, u8 slave_id1,
 	int err = 0;
 	struct mutex *lock = &self->indirect_access_lock;
 
+	dev_dbg(
+		self->dev,
+		"port: %u: ser addr 0x%x -> 0x%x, sen addr 0x%x -> 0x%x",
+		chan_id,
+		slave_id1, slave_alias1,
+		slave_id2, slave_alias2);
+
 	mutex_lock(lock);
 
 	/* 	{0x4C, 0x01}, /\* 0x01 *\/ */
@@ -1335,8 +1363,10 @@ static int ub960_serializer_create(struct ub960 *self, struct ub960_port *port)
 	/* there was no entry in the device tree for this
 	 * port
 	 */
-	if (port->ser_info.addr == 0)
+	if (port->ser_info.addr == 0) {
+		dev_warn(self->dev, "No DT entry for serializer on port %d\n", port->index);
 		return 0;
+	}
 
 	if (port->ser) {
 		dev_warn(self->dev, "Serializer already created for port %d\n", port->index);
@@ -1347,7 +1377,9 @@ static int ub960_serializer_create(struct ub960 *self, struct ub960_port *port)
 	i2c_info.addr = port->ser_info.addr;
 	i2c_info.of_node = port->ser_info.of_node;
 
-	port->ser = i2c_new_device(adap, &i2c_info);
+	dev_dbg(self->dev, "Creating i2c device for node: %s\n", port->ser_info.of_node->full_name);
+
+	port->ser = i2c_new_client_device(adap, &i2c_info);
 	if (!port->ser) {
 		dev_err(self->dev,
 			"could not create i2c client for serializer"
@@ -1355,6 +1387,8 @@ static int ub960_serializer_create(struct ub960 *self, struct ub960_port *port)
 			adap->name, i2c_info.type, i2c_info.addr);
 		return -ENOMEM;
 	}
+
+	dev_dbg(self->dev, "Serializer created for port %d\n", port->index);
 
 	return 0;
 }
@@ -1726,7 +1760,7 @@ static int ub960_test_pattern_driver_start(struct ub960 *self)
 	i2c_info.addr = self->test_pattern.reg;;
 	i2c_info.of_node = self->test_pattern.node;
 
-	self->tp_client = i2c_new_device(adap, &i2c_info);
+	self->tp_client = i2c_new_client_device(adap, &i2c_info);
 	if (!self->tp_client) {
 		dev_err(self->dev,
 			"could not create i2c client for test pattern adapter=%s type=%s addr=%#.2x",
@@ -1900,7 +1934,7 @@ static void ub960_port_check_lock_sts(struct work_struct *work)
 		return;
 	}
 
-	dev_info(self->dev, "probe success");
+	dev_info(self->dev, "[%d] probe success", port->index);
 }
 
 static int ub960_handle_port_irq(struct ub960 *self, struct ub960_port *port)
@@ -1923,32 +1957,58 @@ static int ub960_handle_port_irq(struct ub960 *self, struct ub960_port *port)
 	return 0;
 }
 
+/**
+  * @param self -- Instance data
+  * @return The number of ports on which no interrupts were detected, or a
+  * negative errno on failure.
+  */
 static int ub960_check_status(struct ub960 *self)
 {
 	int err;
 	unsigned int status;
 	struct ub960_port *port;
 	int id;
+	int remaining_ports;
 
+	remaining_ports = ARRAY_SIZE(self->ports);
 	TRY(err, regmap_read(self->map, UB960_REG_INTERRUPT_STS, &status));
 
 	if (!status)
-		return -EIO;
+		return remaining_ports;
 
 	dev_dbg_ratelimited(self->dev, "STATUS: %02x\n", status & 0xff);
 
 	for (id = 0; id < ARRAY_SIZE(self->ports); id++) {
 		port = &self->ports[id];
 
-		if (!port->configured)
+		if (!port->configured) {
+			remaining_ports--;
 			continue;
+		}
+
+		if (!port->enabled) {
+			remaining_ports--;
+			dev_warn(self->dev, "WARNING: port %i is configured "
+			"but is not enabled, ensure this is expected", port->index);
+			continue;
+		}
 
 		/* Ignore errors, check all ports */
-		if (status & (1 << port->index))
-			ub960_handle_port_irq(self, port);
+		if (status & (1 << port->index)) {
+			if (!ub960_handle_port_irq(self, port)) {
+				remaining_ports--;
+			}
+		} else {
+			dev_dbg(self->dev, "Port %i is configured "
+			"and enabled, but no interrupt was detected yet", port->index);
+		}
 	}
 
-	return 0;
+	if (remaining_ports) {
+		dev_dbg(self->dev, "No activity on %i port(s)", remaining_ports);
+	}
+
+	return remaining_ports;
 };
 
 static irqreturn_t ub960_handle_irq(int irq, void *arg)
@@ -1972,6 +2032,22 @@ static void ub960_remove_port(struct ub960 *self, struct ub960_port *port)
 		i2c_unregister_device(port->ser);
 }
 
+static unsigned int ub960_ports_detected(struct ub960 *self)
+{
+	int i;
+	int num_ports = 0;
+	struct ub960_port *port;
+
+	for (i = 0; i < ARRAY_SIZE(self->ports); ++i) {
+		port = &(self->ports[i]);
+		if (self->ports[i].locked || delayed_work_pending(&(port->lock_work))) {
+			num_ports++;
+		}
+	}
+
+	return num_ports;
+}
+
 static void ub960_poll_status(struct work_struct *work)
 {
 	struct ub960 *self = container_of(to_delayed_work(work), struct ub960,
@@ -1979,17 +2055,34 @@ static void ub960_poll_status(struct work_struct *work)
 
 	int err = ub960_check_status(self);
 	int i;
+	bool saw_all_ports = (err == 0);
+	bool all_ports_detected =
+		(ub960_ports_detected(self) == ARRAY_SIZE(self->ports));
 
-	if(err && self->status_count > 0) {
+	if (saw_all_ports || all_ports_detected) {
+		// nothing more to do, stop polling
+		return;
+	}
+
+	if (self->status_count > 0) {
+		// try again
 		schedule_delayed_work(&self->status_work, self->status_period);
 		self->status_count--;
-	} else if(err) {
-		for (i = 0; i < ARRAY_SIZE(self->ports); ++i) {
-			ub960_remove_port(self, &self->ports[i]);
-		}
-
-		dev_err(self->dev, "probe failure");
+		return;
 	}
+
+	// ran out of tries;
+	if ((i = ub960_ports_detected(self))) {
+		dev_warn(self->dev, "WARNING: Only detected activity on %d ports. "
+				"Are all sensors connected?", i);
+		return;
+	}
+
+	for (i = 0; i < ARRAY_SIZE(self->ports); ++i) {
+		ub960_remove_port(self, &self->ports[i]);
+	}
+
+	dev_err(self->dev, "probe failure");
 }
 
 static int ub960_setup_irq(struct ub960 *self)
@@ -2045,6 +2138,7 @@ static int ub960_probe(struct i2c_client *client,
 	self->lock_timeout = 4 * HZ;
 	self->status_period = HZ;
 	self->status_count = 10;
+	self->active_streams = 0;
 
 	/* Load configuration from device tree */
 	TRY(err, ub960_configuration_load(self, node));

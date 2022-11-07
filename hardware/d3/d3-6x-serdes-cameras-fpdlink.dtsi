@@ -17,10 +17,10 @@
 /* Possible Cams*/
 #include "d3-tegra-nvcsi.dtsi"
 #include "templated-cameras/d3-cam-ov10640-template.dtsi"
-#include "templated-cameras/d3-cam-imx390-template.dtsi"
 #include "templated-cameras/d3-cam-imx390rcm-template.dtsi"
+#include "templated-cameras/d3-cam-imx390-template.dtsi"
 #include "templated-cameras/d3-cam-imx390cmf-template.dtsi"
-#include "templated-cameras/d3-cam-imx490fpd-template.dtsi"
+/* #include "templated-cameras/d3-cam-imx490fpd-template.dtsi" */
 //#include "templated-cameras/d3-cam-ar0233-fpdlink-template.dtsi"
 // TODO: This camera works, but adding support for it puts the DTB file over
 // the maximum size of 512 KB.

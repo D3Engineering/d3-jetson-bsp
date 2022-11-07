@@ -84,7 +84,7 @@
 	readout_orientation = "0";			\
 	line_length = "1480";				\
 	inherent_gain = "1";				\
-	serdes_pix_clk_hz = "535000000";		\
+	serdes_pix_clk_hz = "500000000";		\
 	pix_clk_hz = "77714286";			\
 	min_framerate = "30";				\
 	max_framerate = "30";				\

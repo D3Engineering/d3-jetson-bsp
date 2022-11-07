@@ -22,7 +22,7 @@ dnl === Basics ===============================================================
 
 AC_INIT([D3 Jetson BSP], [d3_jetson_bsp_triplet])
 AC_PREREQ(2.69)
-AC_COPYRIGHT([Copyright (C) 2019 D3 Engineering])
+AC_COPYRIGHT([Copyright (C) 2019--2022 D3 Engineering])
 
 AC_SUBST([D3_JETSON_BSP_MAJOR], d3_jetson_bsp_major)
 AC_SUBST([D3_JETSON_BSP_MINOR], d3_jetson_bsp_minor)
@@ -86,7 +86,7 @@ AC_ARG_WITH(
     [dtb],
     AS_HELP_STRING([--with-dtb=dtb-file], [specify dtb file for flash-dtb (use absolute path)]),
     [dtb_file=`realpath -q -m $withval`],
-    [dtb_file=`realpath -q -m .`/build/deploy/boot/d3-xavier-16x-fpdlink.dtb])
+    [dtb_file=`realpath -q -m .`/build/deploy/boot/d3-orin-6x-serdes.dtb])
 
 AC_ARG_WITH(
     [kconfig],
@@ -110,29 +110,29 @@ AC_ARG_WITH(
 dnl === Argument processing ==================================================
 
 # Set the L4T path based on the target system
+AM_CONDITIONAL(TEGRAFLASH, false) # Set to true to use the new tegraflash
+AC_SUBST([D3_EXTLINUX_APPEND], []) # Adds extra options to extlinux.conf
+
+AM_CONDITIONAL(ORIN, false)
 AM_CONDITIONAL(XAVIER, false)
-AM_CONDITIONAL(TX2, false)
-AM_CONDITIONAL(NANO, false)
 AM_CONDITIONAL(NX, false)
 AC_ARG_WITH(
     [system-type],
-    AS_HELP_STRING([--with-system-type=system], [xavier, tx2, nx, nano]),
+    AS_HELP_STRING([--with-system-type=system], [orin, xavier, nx]),
     [
         case "${withval}" in
+          orin)
+            AM_CONDITIONAL(ORIN, true)
+            AM_CONDITIONAL(TEGRAFLASH, true)
+            AC_SUBST([D3_EXTLINUX_APPEND], ["console=ttyTCU0,115200 console=ttyAMA0,115200 console=tty0"]) # Add serial output
+            system_type=orin
+            l4t_dir=`realpath ~/nvidia/nvidia_sdk/JetPack_${JP_VERSION}_Linux_JETSON_AGX_ORIN_TARGETS/Linux_for_Tegra`
+          ;;
           xavier)
             AM_CONDITIONAL(XAVIER, true)
+            AM_CONDITIONAL(TEGRAFLASH, true)
             system_type=xavier
             l4t_dir=`realpath ~/nvidia/nvidia_sdk/JetPack_${JP_VERSION}_Linux_JETSON_AGX_XAVIER/Linux_for_Tegra`
-          ;;
-          tx2)
-            AM_CONDITIONAL(TX2, true)
-            system_type=tx2
-            l4t_dir=`realpath ~/nvidia/nvidia_sdk/JetPack_${JP_VERSION}_Linux_JETSON_TX2/Linux_for_Tegra`
-          ;;
-          nano)
-            AM_CONDITIONAL(NANO, true)
-            system_type=nano
-            l4t_dir=`realpath ~/nvidia/nvidia_sdk/JetPack_${JP_VERSION}_Linux_JETSON_NANO_DEVKIT/Linux_for_Tegra`
           ;;
           nx)
             AM_CONDITIONAL(NX, true)
@@ -140,14 +140,16 @@ AC_ARG_WITH(
             system_type=xavier-nx-devkit-emmc
           ;;
           *)
-            AC_MSG_ERROR([bad value ${withval} for --with-system-type (valid:xavier, tx2, nano, nx)])
+            AC_MSG_ERROR([bad value ${withval} for --with-system-type (valid:orin, xavier, nx)])
           ;;
     esac],
     [
         jv="jp_version"
-        AM_CONDITIONAL(XAVIER, true)
-        system_type=xavier
-        l4t_dir=`realpath ~/nvidia/nvidia_sdk/JetPack_${JP_VERSION}_Linux_JETSON_AGX_XAVIER/Linux_for_Tegra`
+        AM_CONDITIONAL(ORIN, true)
+        AM_CONDITIONAL(TEGRAFLASH, true)
+        AC_SUBST([D3_EXTLINUX_APPEND], ["console=ttyTCU0,115200 console=ttyAMA0,115200 console=tty0"]) # Add serial output
+        system_type=orin
+        l4t_dir=`realpath ~/nvidia/nvidia_sdk/JetPack_${JP_VERSION}_Linux_JETSON_AGX_ORIN_TARGETS/Linux_for_Tegra`
     ])
 
 # Change the L4T directory from the one inferred by the system type if
@@ -180,7 +182,7 @@ AC_SUBST([VERSION_PREFIX], [$version_prefix])
 AC_SUBST([VERSION_NAME], [$D3_JETSON_BSP_VERSION$VERSION_SUFFIX])
 
 # Paths
-kernel_dir=`realpath ./kernel/kernel-4.9`
+kernel_dir=`realpath ./kernel/kernel-5.10`
 m4_define(top_build_path, "$PWD/build")
 AC_SUBST([TOP_BUILD_PATH], $top_build_path)
 m4_define(linux_build_path, "$PWD/build/kernel")
@@ -191,11 +193,14 @@ m4_define(artifact_path, "$PWD/artifacts")
 AC_SUBST([ARTIFACT_PATH], $artifact_path)
 
 # Compilation setup
-m4_define(linux_cross_tool_prefix, "aarch64-linux-gnu-")
+m4_define(linux_cross_tool_prefix, "aarch64-buildroot-linux-gnu-")
+AC_SUBST([LINUX_CROSS_TOOL_PREFIX], $linux_cross_tool_prefix)
 m4_define(linux_cross32cc, "arm-linux-gnueabihf-gcc-5")
 m4_define(linux_args, "-C "$kernel_dir" "O=$linux_build_path" "CROSS_COMPILE=$linux_cross_tool_prefix" "CROSS32CC=$linux_cross32cc" "ARCH=arm64" "INSTALL_MOD_PATH=$deploy_build_path" "INSTALL_HDR_PATH=$deploy_build_path/linux-headers"")
 AC_SUBST([LINUX_ARGS], $linux_args)
 AC_SUBST([KERNEL_DIR], $kernel_dir)
+
+AC_SUBST([NVIDIA_DISPLAY_DRIVER_DIR], ["l4t-submodules/tegra/kernel-src/nv-kernel-display-driver"])
 
 # Config variables
 AC_SUBST([TARGET_HOST], $target_host)

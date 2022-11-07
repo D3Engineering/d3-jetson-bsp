@@ -29,3 +29,5 @@ obj-$(CONFIG_D3_OV10640) += ov10640/
 
 obj-$(CONFIG_D3_FIXEDPT) += d3fixedpt/
 obj-$(CONFIG_D3_NXC_FPGA_GPIO) += nxc-fpga-gpio/
+
+ccflags-y += -I$(src)/../../include

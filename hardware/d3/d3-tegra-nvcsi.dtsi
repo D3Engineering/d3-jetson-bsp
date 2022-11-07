@@ -42,7 +42,7 @@
 	};
 };
 
-&vi_base {
+&capture_vi_base {
 	ports {
 		#address-cells = <1>;
 		#size-cells = <0>;

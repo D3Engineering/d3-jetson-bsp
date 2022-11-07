@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2019, D3 Engineering.  All rights reserved.
+ * Copyright (c) 2018-2022, D3 Engineering.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,7 +28,7 @@
 	chosen {
 		d3,config-eeprom@0 {
 			/* Reference the nvmem in the manner required by
-			 * kernel/kernel-4.9/Documentation/devicetree/bindings/nvmem/nvmem.txt
+			 * kernel/kernel-5.10/Documentation/devicetree/bindings/nvmem/nvmem.txt
 			 */
 			nvmem = <&D3_CONFIG_EEPROM>;
 			nvmem-names = "overlay";

@@ -1,0 +1,12 @@
+# See https://editorconfig.org/ for explanation of this file
+
+# Don't look above here for EditorConfig settings
+root=true
+
+# All files should be saved with Unix line endings
+[*]
+end_of_line = LF
+
+[configure.ac]
+indent_style = space
+indent_size = 4

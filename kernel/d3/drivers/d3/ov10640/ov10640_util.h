@@ -48,8 +48,6 @@ typedef unsigned short UInt16;
 typedef unsigned long long UInt64;
 typedef int Int32;
 
-#define TRUE (1)
-#define FALSE (0)
 /* ========================================================================== */
 /*                             Include Files                                  */
 /* ========================================================================== */

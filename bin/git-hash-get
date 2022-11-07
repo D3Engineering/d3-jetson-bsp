@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 
 # The purpose of this script is to find the git commit hash for the
-# current BSP tree. If that's not possible or the tree is dirty an
+# current BSP tree. If that's not possible or the tree is dirty, an
 # attempt is made to identify the build in a less desirable manner.
 #
 # This was originally written to make it easier to identify kernels
-# source code at runtime particularly for the Image Science team.
+# source code at runtime, particularly for the Image Science team.
 
 WHO=$(git config --global user.email 2> /dev/null)
 WHEN=$(date)
@@ -28,7 +28,7 @@ is-clean()
 is-untracked()
 {
     # Files with ?? as a prefix are untracked
-    [[ -z $(git status -s --porcelain | egrep '^\?\?') ]]
+    [[ -n $(git status -s --porcelain | egrep '^\?\?') ]]
 }
 
 
@@ -56,7 +56,7 @@ main()
         exit
     fi
 
-    # If we make it this far print the short commit hash
+    # If we make it this far, print the short commit hash
     get-head-rev-hash
 }
 

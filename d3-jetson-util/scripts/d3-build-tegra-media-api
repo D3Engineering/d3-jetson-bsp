@@ -1,9 +1,9 @@
 #!/bin/bash
 #
-# A utility to download, build, and install the Tegra Multi Media API
+# A utility to download, build, and install the Tegra Multimedia API
 # on Nvidia Jetson platforms.
 #
-# Copyright (c) 2019-2020, D3 Engineering.  All rights reserved.
+# Copyright (c) 2019-2022, D3 Engineering.  All rights reserved.
 
 
 SRC_DIR_ARRAY=( \
@@ -16,6 +16,8 @@ declare -A JMM_API_VERSION_ARRAY=( \
     ["32.4.2"]="32.4.2-20200408182620"  # JP 4.4 EA
     ["32.4.3"]="32.4.3-20200625213407"  # JP 4.4
     ["32.4.4"]="32.4.4-20201016123640"  # JP 4.4.1
+    ["32.7.1"]="32.7.1-20220219090344"  # JP 4.6.1
+    ["35.1.0"]="35.1.0-20220810203728"  # JP 5.0.2
 )
 
 DEST_DIR="$HOME/jetson_multimedia_api"
@@ -83,7 +85,7 @@ install_deps()
      libexpat1-dev \
      libjpeg-dev \
      libgstreamer1.0-dev \
-     gcc-6 \
+     gcc-10 \
      libv4l-dev \
      nvidia-l4t-jetson-multimedia-api"$(get_manual_jmm_api_version)"
 }
@@ -92,12 +94,6 @@ copy_src()
 {
     mkdir -p "$DEST_DIR"
     cp -r "$SRC_DIR"/* "$DEST_DIR"
-}
-
-perf_max()
-{
-    sudo nvpmodel -m 0
-    sudo jetson_clocks
 }
 
 n_cpus()
@@ -121,6 +117,5 @@ find_src
 check_src
 attempt_jp44_patch
 copy_src
-perf_max
 build
 echo -e '\e[32mTegra Multimedia API installed!\e[0m'

@@ -42,10 +42,10 @@ To enter recovery, the process is similar to other Jetson products.
 
 ## 3. Flash the SoM Using SDKManager
 
-Open NVIDIA SDKManager on the host, this can be downloaded for Ubuntu 16.04
-and 18.04 from NVIDIA's website.
+Open NVIDIA SDKManager on the host, this can be downloaded for Ubuntu 20.04, 18.04
+or 16.04 from NVIDIA's website.
 When opening NVIDIA SDKManager on the host system, the program will show the
-option to select the type of SoM connected. If the SoM that has a
+option to select the type of SoM connected. If the SoM has a
 micro SD slot on it, select the "Jetson NX Devkit" option. If the SoM does
 **not** have a micro SD slot, select the production "Jetson NX" option.
 
@@ -79,7 +79,7 @@ From a terminal inside the L4T directory, run flash.sh with the D3 DTB file as
 the target.
 
 ```
-# Example command for Jetson Xavier NX emmc (No SD card)
+# Example command for Jetson Xavier NX eMMC (No SD card)
 sudo ./flash.sh -r -k kernel-dtb -d ./d3-nxc-fpdlink.dtb \
      jetson-xavier-nx-devkit-emmc mmcblk0p1
 

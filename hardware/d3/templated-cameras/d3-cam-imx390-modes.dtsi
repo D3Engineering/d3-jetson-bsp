@@ -27,7 +27,7 @@
 	active_h = "1096";				\
 	readout_orientation = "0";			\
 	inherent_gain = "1";				\
-	serdes_pix_clk_hz = "535000000";		\
+	serdes_pix_clk_hz = "500000000";		\
 	pix_clk_hz = "148500000";			\
 	embedded_metadata_height = "1";			\
 	min_hdr_ratio = "64.0";				\

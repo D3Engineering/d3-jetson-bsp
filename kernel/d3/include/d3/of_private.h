@@ -1,1 +1,1 @@
-../../../kernel-4.9/drivers/of/of_private.h
+../../../kernel-5.10/drivers/of/of_private.h

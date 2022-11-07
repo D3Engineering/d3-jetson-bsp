@@ -284,7 +284,9 @@ static int ov10640_s_stream(struct v4l2_subdev *sd, int enable)
 
 static struct v4l2_subdev_video_ops ov10640_subdev_video_ops = {
 	.s_stream	= ov10640_s_stream,
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0)
 	.g_mbus_config	= camera_common_g_mbus_config,
+#endif
 };
 
 static struct v4l2_subdev_core_ops ov10640_subdev_core_ops = {
@@ -338,6 +340,9 @@ static struct v4l2_subdev_pad_ops ov10640_subdev_pad_ops = {
 	.enum_mbus_code	     = camera_common_enum_mbus_code,
 	.enum_frame_size     = camera_common_enum_framesizes,
 	.enum_frame_interval = camera_common_enum_frameintervals,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
+	.get_mbus_config	= camera_common_get_mbus_config,
+#endif
 };
 
 
@@ -382,6 +387,13 @@ static struct camera_common_sensor_ops ov10640_common_ops = {
 static struct regmap_config ov10640_regmap_cfg = {
 	.reg_bits = 16,
 	.val_bits = 8,
+	.cache_type = REGCACHE_RBTREE,
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
+	.use_single_rw = true,
+#else
+	.use_single_read = true,
+	.use_single_write = true,
+#endif
 };
 
 static const struct v4l2_subdev_internal_ops ov10640_subdev_internal_ops = {
@@ -662,6 +674,7 @@ static int ov10640_probe(struct i2c_client *client,
 	self->dev = &client->dev;
 	self->normalization_type = OV10640_NORMALIZATION_ENDMARKER;
 	ov10640_combine_init(&self->combine);
+
 #ifdef CONFIG_D3_OV10640_DEBUG
 	ov10640_combine_dump(self, &self->combine);
 #endif /* CONFIG_D3_OV10640_DEBUG */
@@ -704,6 +717,7 @@ static int ov10640_probe(struct i2c_client *client,
 	if (!self->i2c_addressing_pin) {
 		dev_dbg(self->dev, "No i2c address pin found, not required.");
 	} else {
+		dev_dbg(self->dev, "i2c address pin found, setting to 0");
 		gpiod_set_value_cansleep(self->i2c_addressing_pin, 0);
 	}
 

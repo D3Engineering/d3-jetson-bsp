@@ -57,6 +57,8 @@ fi
 
 [[ $KERNELRELEASE ]] || die "KERNELRELEASE is not set"
 [[ $L4TDIR ]] || die "L4TDIR is not set"
+[[ $TEGRAFLASH_LOCAL_PATH ]] || die "TEGRAFLASH_LOCAL_PATH is not set"
+[[ $NVIDIA_DISPLAY_DRIVER_DIR ]] || die "NVIDIA_DISPLAY_DRIVER_DIR is not set"
 
 echo "$0: Processing $pname in $pdir, kernel release version $KERNELRELEASE"
 
@@ -65,12 +67,21 @@ set -x
 declare -p
 
 # === Tweak the kernel package ===
-
 pushd "${pdir}/usr/lib/linux-image-${KERNELRELEASE}"
+
+# Compile and install out-of-tree modules
+# FIRE_HAZARD: Nvidia Display Driver
+# The environment variables that this script receives confuse NVIDIA's Makefile, so
+# we clear the environment and curate a select few that are needed
+env -i $MAKE -C $NVIDIA_DISPLAY_DRIVER_DIR -j$(nproc) \
+	TARGET_ARCH=aarch64 ARCH=arm64 CC=$CC LD=$LD AR=$AR CXX=${CROSS_COMPILE}g++ OBJCOPY=$OBJCOPY \
+	SYSSRC=$abs_srctree SYSOUT=$abs_objtree PATH=$PATH modules
+env -i $MAKE -C $NVIDIA_DISPLAY_DRIVER_DIR -j$(nproc) \
+	SYSSRC=$abs_srctree SYSOUT=$abs_objtree PATH=$PATH INSTALL_MOD_PATH=$pdir modules_install
 
 # Sign the DTBs
 #while IFS='' read -r dtb_name ; do
-for dtb_name in *.dtb ; do
+for dtb_name in $(find . -name "*.dtb") ; do
 
     dtsfn="$(mktemp)"
 
@@ -78,7 +89,6 @@ for dtb_name in *.dtb ; do
     dtc -I dtb -O dts -o "$dtsfn" "$dtb_name" 2>/dev/null
 
     type="$(grep -E '^\s+model\b' "$dtsfn" | sed -E 's/^[^"]+"//; s/".*$//')"
-
     case "$type" in
         jetson-nano|*TX1*|*Nano*)
             id='0x21'
@@ -118,9 +128,14 @@ for dtb_name in *.dtb ; do
     dtc -I dts -O dtb -o "$dtb_name" "$dtsfn"
     rm -f "$dtsfn"
 
+    pushd $(dirname "$dtb_name")
+    dtb_filename=$(basename "$dtb_name")
+
     # Sign the DTB
-    VV "SIGN_DTB $dtb_name" "${L4TDIR}/bootloader/tegraflash.py" --chip $id --cmd "sign $dtb_name" \
+    VV "SIGN_DTB $dtb_filename" "${TEGRAFLASH_LOCAL_PATH}/tegraflash.py" --chip $id --cmd "sign $dtb_filename" \
         --skipuid > "$OUTFD" || die "Could not sign $dtb_name for chip ID $id"
+
+    popd
 
 done #foreach *.dtb
 
@@ -147,7 +162,7 @@ pushd "${L4TDIR}/bootloader"
 VV "MKBOOTIMG ${kimg_abs}.img" ./mkbootimg --kernel "${kimg_abs}" \
     --ramdisk l4t_initrd.img --board mmcblk01p1 --output "${kimg_abs}.img"
 cd "${pdir}/boot/"
-VV "SIGN_KERNEL ${kimg_abs}.img" "${L4TDIR}/bootloader/tegraflash.py" --chip 0x19 --cmd "sign ${kimg_abs}.img" --skipuid > "$OUTFD"
+VV "SIGN_KERNEL ${kimg_abs}.img" "${TEGRAFLASH_LOCAL_PATH}/tegraflash.py" --chip 0x19 --cmd "sign ${kimg_abs}.img" --skipuid > "$OUTFD"
 popd
 
 # === Add an /etc/kernel/postinst.d script that will dd the kernel. ===
@@ -172,7 +187,6 @@ if grep -s -E '^TEGRA_CHIPID 0x19' /etc/nv_boot_control.conf ; then
 fi
 EOT
 
-chown root:root d3-flash-xavier-kernel
 chmod 755 d3-flash-xavier-kernel
 
 popd

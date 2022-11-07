@@ -236,7 +236,7 @@
 };
 
 
-&vi_base {
+&capture_vi_base {
 	num-channels = <6>;
 	vi_ports: ports {
 		#address-cells = <1>;

@@ -25,6 +25,7 @@
 #include <linux/gpio/driver.h>
 #include <linux/platform_device.h>
 #include <linux/of_platform.h>
+#include <linux/i2c.h>
 
 #include <d3/d3-jetson-bsp.h>
 #include <d3/common.h>
@@ -295,7 +296,7 @@ static int ub953_sensor_create(struct ub953 *self,
 	i2c_info.addr = devinfo->addr;
 	i2c_info.of_node = devinfo->of_node;
 
-	self->sensor = i2c_new_device(adap, &i2c_info);
+	self->sensor = i2c_new_client_device(adap, &i2c_info);
 	if(!self->sensor)
 	{
 		dev_err(self->dev,
@@ -304,6 +305,11 @@ static int ub953_sensor_create(struct ub953 *self,
 			adap->name, i2c_info.type, i2c_info.addr);
 		return -ENOMEM;
 	}
+
+	dev_dbg(self->dev,
+			"created i2c client for sensor"
+			" adapter=%s type=%s addr=%#.2x",
+			adap->name, i2c_info.type, i2c_info.addr);
 
 	return 0;
 }

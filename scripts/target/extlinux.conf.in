@@ -7,12 +7,14 @@ MENU TITLE D3 boot options
 LABEL d3
       MENU LABEL D3 Debug Kernel
       LINUX /boot/d3-Image
+      INITRD /boot/initrd
       # Note: The FDT line below points to a hardlink. You can either specify
       # the filename explicitly, or modify the existing hardlink accordingly
       FDT /boot/active-dtb
-      APPEND ${cbootargs} root=/dev/mmcblk0p1 rw rootwait rootfstype=ext4 active_overlays=
+      APPEND ${cbootargs} root=/dev/mmcblk0p1 rw rootwait rootfstype=ext4 @D3_EXTLINUX_APPEND@ active_overlays=
 
 LABEL nvidia
       MENU LABEL Nvidia Kernel
+      INITRD /boot/initrd
       LINUX /boot/Image-nvidia
-      APPEND ${cbootargs} root=/dev/mmcblk0p1 rw rootwait rootfstype=ext4
+      APPEND ${cbootargs} root=/dev/mmcblk0p1 rw rootwait rootfstype=ext4 @D3_EXTLINUX_APPEND@

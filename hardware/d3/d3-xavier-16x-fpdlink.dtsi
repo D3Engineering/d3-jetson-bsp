@@ -180,7 +180,7 @@
     };
 };
 
-&vi_base {
+&capture_vi_base {
     num-channels = <16>;
     vi_ports: ports {
         #address-cells = <1>;

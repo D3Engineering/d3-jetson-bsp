@@ -7,5 +7,5 @@ rm -f \
    kernel/d3/drivers/d3/ub953/modules.builtin \
    kernel/d3/drivers/d3/ub960/modules.builtin
 
-cd l4t-submodules/kernel/kernel-4.9
+cd l4t-submodules/kernel/kernel-5.10
 make mrproper

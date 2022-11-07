@@ -31,12 +31,12 @@ done
 dtb_file=`realpath -q -m ."/build/deploy/boot/$dtb_name"`
 
 # Input System Type
-sys_array=("xavier" "tx2" "nano" "nx")
+sys_array=("orin" "xavier" "nx")
 select sys_name in "${sys_array[@]}"; do
 	test -n $sys_name && break
 	echo "Select a valid system type"
 done
 
-read -e -p "Provide target hostname (default 'tx2'): " -i "tx2" target_hostname
+read -e -p "Provide target hostname (default '$sys_name'): " -i "$sys_name" target_hostname
 
 ./configure --with-dtb="$dtb_file" --with-system-type="$sys_name" --with-target-host="$target_hostname"

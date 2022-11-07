@@ -720,7 +720,7 @@ $else$
   \fancyfoot{}
  \lhead{\today}
  \chead{\thetitle}
- \rhead{\href{http://www.d3engineering.com}{\includegraphics[height=50pt]{img/d3_logo}}}
+ \rhead{\href{https://www.d3engineering.com}{\includegraphics[height=20pt]{img/d3_logo}}}
  \lfoot{\url{www.d3engineering.com}}
  \cfoot{}
  \rfoot{\thepage}

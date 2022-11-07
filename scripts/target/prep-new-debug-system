@@ -8,9 +8,8 @@ fi
 
 boot()
 {
-    echo 'Changing owner of /boot, /lib, and /var/nvidia/nvcam/settings'
-    chown -R nvidia:nvidia /boot /lib /var/nvidia/nvcam/settings
-
+    echo 'Changing owner of /boot, /lib, /usr/lib/modules, and /var/nvidia/nvcam/settings'
+    chown -R nvidia:nvidia /boot /lib /usr/lib/modules /var/nvidia/nvcam/settings
 
     # make nvlibs directory writable
     chmod -R a+w /usr/lib/aarch64-linux-gnu/tegra/
@@ -29,7 +28,7 @@ boot()
     # This is intentionally a move and not a copy. A signature
     # mismatch can trigger a bug in cboot. It is safer to ensure that
     # this file will not match a developer kernel Image file.
-    mv /boot/Image.sig /boot/Image-nvidia.sig
+    mv /boot/Image.t19x.sig /boot/Image-nvidia.t19x.sig
 
 }
 
@@ -38,6 +37,9 @@ sudoers()
     echo 'Copying sudoers'
     cp sudoers /etc/sudoers
     chmod 440 /etc/sudoers
+
+    echo 'Setting root password for easier recovery'
+    usermod --password $(echo nvidia | openssl passwd -1 -stdin) root
 }
 
 utils()
@@ -79,7 +81,11 @@ utils()
         silversearcher-ag \
         strace \
         vlc \
+        dialog \
         xxd
+
+    echo 'Disable unattended Upgrade'
+    systemctl disable --now apt-daily-upgrade.timer apt-daily.timer
 }
 
 boot

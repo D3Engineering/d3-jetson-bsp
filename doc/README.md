@@ -89,8 +89,8 @@ interface, run:
 
 	You must specify all of the following options:
 
-	* `--with-system-type`: `tx2`, `xavier`, or `nano`. This defaults to
-	`tx2` and influences other defaults like the `--with-l4t` option.
+	* `--with-system-type`: `orin`, `xavier`, or `nx`. This defaults to
+	`orin` and influences other defaults like the `--with-l4t` option.
 
 	* `--with-l4t`: Specify an alternate Linux for Tegra (L4T) host
 	directory if you did not use the defaults from NVIDIA's SDK Manager

@@ -49,9 +49,7 @@ install-files()
 main()
 {
     install-files "$TEGRA_DIR" <<EOF
-libnvargus.so
-libnvargus_socketclient.so
-libnvargus_socketserver.so
+libnvscf.so
 EOF
 
 }

@@ -235,7 +235,7 @@ struct device_node *duplicate_single_node_ol(struct device_node *np,
 	}
 
 	dup->name = __of_get_property(dup, "name", NULL) ? : "<NULL>";
-	dup->type = __of_get_property(dup, "device_type", NULL) ? : "<NULL>";
+	/* dup->type = __of_get_property(dup, "device_type", NULL) ? : "<NULL>"; */
 
 	return dup;
 }
@@ -322,7 +322,8 @@ err_fail_name:
 }
 
 static int do_property_override_from_overlay(struct device_node *target,
-					     struct device_node *overlay)
+											 struct device_node *overlay,
+											 const char* prefix)
 {
 	struct property *prop;
 	struct property *tprop;
@@ -330,9 +331,6 @@ static int do_property_override_from_overlay(struct device_node *target,
 	const char *pval;
 	int lenp = 0;
 	int ret;
-
-	pr_debug("Update properties from %s to %s\n", overlay->full_name,
-		 target->full_name);
 
 	for_each_property_of_node(overlay, prop) {
 		/* Skip those we do not want to proceed */
@@ -389,6 +387,8 @@ add_prop:
 				goto cleanup;
 			}
 		}
+
+		pr_info("%s: %sprop: %s", MODULE_NAME, prefix, prop->name);
 	}
 
 	return 0;
@@ -399,35 +399,57 @@ cleanup:
 }
 
 
-static int do_property_overrides(struct device_node *target,
-				 struct device_node *overlay)
+static int do_property_overrides( struct device_node *target,
+								  struct device_node *overlay,
+								  const char *prefix)
 {
-	struct device_node *tchild, *ochild;
+	struct device_node *tchild, *ochild, *ochild_debug;
 	const char *address_name;
 	int ret;
 
-	ret = do_property_override_from_overlay(target, overlay);
+	char next_prefix[50] = {};
+
+	(void)tchild;
+	(void)ochild;
+	(void)address_name;
+	(void)of_get_child_by_last_name;
+
+	// Override properties in target, with values from overlay
+	ret = do_property_override_from_overlay(target, overlay, prefix);
 	if (ret < 0) {
+
 		pr_err("Target %s update with overlay %s failed: %d\n",
 			target->name, overlay->name, ret);
 		return ret;
 	}
 
+	// Reurse for child nodes
 	for_each_child_of_node(overlay, ochild) {
-		address_name = strrchr(ochild->full_name, '/');
-		tchild = of_get_child_by_last_name(target, address_name + 1);
+		// Attemp to get the target child
+		tchild = of_get_child_by_name(target, ochild->name);
 		if (!tchild) {
-			pr_err("Overlay node %s not found in target node %s\n",
+			pr_err(MODULE_NAME ": Overlay node %s not found in target node %s\n",
 				ochild->full_name, target->full_name);
+
+			for_each_child_of_node(target, ochild_debug) {
+				pr_err("\t%s: target %s has node %s", MODULE_NAME, target->full_name, ochild_debug->full_name);
+			}
 			continue;
 		}
-		ret = do_property_overrides(tchild, ochild);
+
+		pr_info("%s: %snode: %s", MODULE_NAME, prefix, ochild->full_name);
+
+		// Recurse, overlaying child node to correspnonding child node
+		strncat(next_prefix, prefix, 48);
+		strncat(next_prefix, "  ", 2);
+		ret = do_property_overrides(tchild, ochild, next_prefix);
 		if (ret < 0) {
-			pr_err("Target %s update with overlay %s failed: %d\n",
+			pr_err(MODULE_NAME ": Target %s update with overlay %s failed: %d\n",
 				tchild->name, ochild->name, ret);
 			return ret;
 		}
 	}
+
 	return 0;
 }
 
@@ -436,6 +458,9 @@ static int handle_properties_overrides(struct device_node *np,
 {
 	struct device_node *overlay;
 	int ret;
+
+	(void)ret;
+	(void)do_property_overrides;
 
 	if (!target) {
 		target = of_parse_phandle(np, "target", 0);
@@ -448,13 +473,15 @@ static int handle_properties_overrides(struct device_node *np,
 
 	overlay = of_get_child_by_name(np, "_overlay_");
 	if (!overlay) {
-		pr_err("Node %s does not have Overlay\n", np->name);
+		pr_err(MODULE_NAME ": Node %s does not have Overlay\n", np->name);
 		return -EINVAL;
 	}
 
-	ret = do_property_overrides(target, overlay);
+	pr_info("%s:   %s -> %s", MODULE_NAME, np->full_name, target->full_name);
+
+	ret = do_property_overrides(target, overlay, "    ");
 	if (ret < 0) {
-		pr_err("Target %s update with overlay %s failed: %d\n",
+		pr_err(MODULE_NAME ": Target %s update with overlay %s failed: %d\n",
 			target->name, overlay->name, ret);
 		return -EINVAL;
 	}
@@ -489,7 +516,7 @@ static int parse_parameters(struct kparam_element **input_k_elem,
 	// find param values
 	kparam_end = kparam_start;
 	cur_k_elem = NULL;
-	pr_debug(MODULE_NAME ": Parsing params: >>%s<<\n", kparam_start);
+	pr_info(MODULE_NAME ": Parsing params: >>%s<<\n", kparam_start);
 
 	while (1) {
 		params_end = (*kparam_end == '\0' || *kparam_end == ' ');
@@ -504,7 +531,7 @@ static int parse_parameters(struct kparam_element **input_k_elem,
 			cur_k_elem->value = kzalloc(sizeof(char) *
 					(kparam_len + 1), GFP_KERNEL);
 			strncpy(cur_k_elem->value, kparam_start, kparam_len);
-			pr_debug(MODULE_NAME ":    found element %s\n", cur_k_elem->value);
+			pr_info(MODULE_NAME ":    found element %s\n", cur_k_elem->value);
 			// move start pointer over separator char
 			kparam_start = kparam_end;
 			kparam_start++;
@@ -513,7 +540,7 @@ static int parse_parameters(struct kparam_element **input_k_elem,
 			break;
 		kparam_end++;
 	}
-	pr_debug(MODULE_NAME ": Done parsing params\n");
+	pr_info(MODULE_NAME ": Done parsing params\n");
 
 	// verify param values exist
 	if (!cur_k_elem)
@@ -662,12 +689,13 @@ static bool check_for_active_overlay(struct kparam_element **kparams_ptr,
 		of_property_for_each_string(np, "param", prop, bname) {
 			found = strcmp(kparams->value, bname) == 0;
 			if (found) {
-				pr_info("node %s match with %s parameter %s\n",
+				pr_info(MODULE_NAME ": node %s match with %s parameter %s\n",
 					np->full_name, source, kparams->value);
 				free_kparam_list(kparams);
 				goto search_done;	// double break
 			}
 		}
+
 		last_param = kparams;
 		kparams = kparams->next;
 		free_kparam_element(last_param);
@@ -710,6 +738,9 @@ static int __init process_fragment(struct device_node *np,
 	int nchild;
 	bool found = false;
 
+	(void)kparams;
+	(void)cnp;
+
 	target_param_count = of_property_count_strings(np, "param");
 	if (target_param_count <=0) {
 		pr_err("Node %s does not have any params\n",
@@ -728,8 +759,12 @@ static int __init process_fragment(struct device_node *np,
 		found = check_for_active_overlay(&kparams, np, "kernel");
 
 	// Check device tree
-	if(!found && (get_dt_parameters(&kparams, overlay_loader_node) == 0))
-		found = check_for_active_overlay(&kparams, np, "device-tree");
+	/* if(!found && (get_dt_parameters(&kparams, overlay_loader_node) == 0)) */
+	/* 	found = check_for_active_overlay(&kparams, np, "device-tree"); */
+
+	(void)get_kernel_parameters;
+	(void)check_for_active_overlay;
+	(void)get_dt_parameters;
 
 #ifdef CONFIG_D3_CONFIG_EEPROM
 
@@ -742,9 +777,11 @@ static int __init process_fragment(struct device_node *np,
 	if (!found)
 		return 0;
 
+	pr_info("%s: fragment %s", MODULE_NAME, np->full_name);
 	for_each_child_of_node(np, cnp) {
 		handle_properties_overrides(cnp, NULL);
 	}
+	(void)handle_properties_overrides;
 
 	return 0;
 }

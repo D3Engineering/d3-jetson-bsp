@@ -54,6 +54,13 @@ enum {
 static struct regmap_config imx390_regmap_cfg = {
 	.reg_bits = 16,
 	.val_bits = 8,
+	.cache_type = REGCACHE_RBTREE,
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
+	.use_single_rw = true,
+#else
+	.use_single_read = true,
+	.use_single_write = true,
+#endif
 };
 
 
@@ -394,7 +401,6 @@ MODULE_DEVICE_TABLE(i2c, imx390_id);
 
 static struct v4l2_subdev_video_ops imx390_subdev_video_ops = {
 	.s_stream	= imx390_s_stream,
-	.g_mbus_config	= camera_common_g_mbus_config,
 	.g_input_status	= imx390_g_input_status,
 };
 
@@ -471,6 +477,9 @@ static struct v4l2_subdev_pad_ops imx390_subdev_pad_ops = {
 	.enum_mbus_code		 = camera_common_enum_mbus_code,
 	.enum_frame_size	 = camera_common_enum_framesizes,
 	.enum_frame_interval = camera_common_enum_frameintervals,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
+	.get_mbus_config        = camera_common_get_mbus_config,
+#endif
 };
 
 

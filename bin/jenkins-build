@@ -9,7 +9,8 @@ unset BUILD_NUMBER
 WORKSPACE_TMP=${WORKSPACE:-${PWD}}/build/tmp
 mkdir -p ${WORKSPACE_TMP}
 export TMPDIR="${WORKSPACE_TMP}"
-L4T_DIRECTORY=/opt/nvidia/JetPack_4.6.1_Linux_JETSON_AGX_XAVIER/Linux_for_Tegra
+export PATH=$PATH:/opt/bootlin/aarch64--glibc--stable-2020.08-1/bin
+L4T_DIRECTORY=/opt/nvidia/JetPack_5.0.2_Linux_JETSON_AGX_ORIN/Linux_for_Tegra
 OTHER_ARGS=()
 for arg in "$@"
 do
@@ -38,20 +39,15 @@ then
 fi
 echo "Build start: $(date)"
 
-# Do a shallow clone of submodules
+# Clone submodules
 echo "Starting submodule init: $(date)"
-git submodule update --init --recursive --depth 1
+git submodule update --init --recursive
 echo "Submodule init complete: $(date)"
 
-# Make sure G-16447 has been applied
-if ! grep -E -q 'KBUILD_DEFCONFIG.+\bd3_defconfig\b' kernel/kernel-4.9/arch/arm64/Makefile ; then
-    cat <<EOT 1>&2
-
-                                 ********
-defconfig is not set properly --- please apply G-16447 to this branch.
-                                 ********
-Aborting.
-EOT
+# Verify we are building using our custom defconfig (see G-16447)
+if ! grep -E -q 'KBUILD_DEFCONFIG.+\bd3_defconfig\b' kernel/kernel-5.10/Makefile ; then
+    echo ""
+    >&2 echo "Error: defconfig is not set properly! Aborting build."
     exit 1
 fi
 

@@ -1,69 +1,76 @@
 #!/bin/bash
 #
 # A simple script to simplify writing a signed DTB to the correct partition
-# This will show all dtbs in /usr/lib/(selected kernel)/ that do not start with
-# "tegra". "tegra*" dtbs are assumed to be from Nvidia.
+# This will show all DTBs in /usr/lib/(selected kernel)/ that do not start with
+# "tegra". "tegra*" DTBs are assumed to be from NVIDIA.
 #
-# Copyright (c) 2019-2020, D3 Engineering.  All rights reserved.
+# Copyright (c) 2019-2022, D3 Engineering.  All rights reserved.
 
 set -o errexit
 set -o pipefail
 shopt -s extglob
 
-[[ -t 0 && -t 1 ]] || { echo "Can't run - not on a terminal" ; exit ; }
-
-function pr() {
-    echo -ne "\e[34m[d3-install-dtb]\e[39m "
-    printf "%s" "$@"
-    echo
+function print() {
+    echo -e "\e[34m[d3-install-dtb]\e[39m $@\e[39m"
 }
+
+# Check if terminal is interactive (0=stdin, 1=stdout)
+if ! [[ -t 0 && -t 1 ]]; then
+    >&2 print "\e[31mError! This script requires an interactive terminal."
+    exit 1
+fi
+
+# Check if effective user is root
+if [[ "$EUID" -ne 0 ]]; then
+    >&2 print "\e[31mError! This script must be run as root."
+    exit 1
+fi
 
 ROOT_DTB_DIR="/usr/lib"
 cd $ROOT_DTB_DIR
 
-pr "Choose an installed D3 BSP release"
+print "Choose an installed D3 BSP release"
 select LIMAGE in ./linux-image*; do
     test -n "$LIMAGE" && break
-    pr "Select a valid d3 bsp kernel release"
+    print "Select a valid D3 BSP kernel release"
 done
 
 DTB_DIR="$ROOT_DTB_DIR/$LIMAGE"
 
 cd "$DTB_DIR" # cd for the sake of select output
 
-IFS=,
 declare -a DTB_ARR_RAW
 declare -a DTB_ARR
 declare -a DTB_ARR_UNENCRYPT
 
 # Text between 'DESC' markers is the names of the products that each
 # DTB corresponds to
-shopt -s nullglob
-files=(./!(tegra*)+(.dtb.encrypt))
-shopt -u nullglob
+files=$(find . -path "./hardware/d3/*" -name "*.dtb.encrypt")
 
-if [[ "${#files[@]}" -lt 1 ]]; then
-    echo "No DTB files found in $DTB_DIR" 1>&2
+if [[ -z $files ]]; then
+    >&2 print "\e[31mNo DTB files found in $DTB_DIR"
     exit 1
 fi
 
-for file in "${files[@]}" ; do
+for file in $files; do
     DTB_ARR_RAW+=("$file")
     unencrypt=$(sed -E 's/\.encrypt$|_sigheader//g' <<<"$file")
     DTB_ARR_UNENCRYPT+=("$unencrypt")
-    DTB_ARR+=("$(strings < "$file" | grep -P 'DESC<[^>]+>DESC' \
+    DTB_ARR+=("$(strings $unencrypt | grep -P 'DESC<[^>]+>DESC' \
 	    | sed 's/[>]*DESC[<]*//g') ($(sed -E 's/^\.\///g' <<<"$unencrypt"))")
 done
 
-pr "Choose a dtb to install"
+print "Choose a DTB to install"
 select DTB in "${DTB_ARR[@]}"; do
     test -n "$DTB" && break
-    pr "Select a valid signed dtb"
+    print "Select a valid signed DTB"
 done
 
 selected="${DTB_ARR_UNENCRYPT[$REPLY-1]}"
 if ln -f "$selected" /boot/active-dtb; then
-    echo -e "[d3-install-dtb] \e[32mkernel-dtb has been selected! (file $selected)\e[39m"
+    print "kernel-dtb has been selected! (file $selected)"
 else
-    echo -e "[d3-install-dtb] \e[31mfailed to link dtb! (file $selected)\e[39m"
+    >&2 print "\e[31mFailed to link DTB! (file $selected)"
+    exit 1
 fi
+
