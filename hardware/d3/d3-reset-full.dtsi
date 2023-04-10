@@ -18,6 +18,8 @@
 #include "templated-deserializers/d3-reset-des.dtsi"
 #include "d3-reset-port.dtsi"
 
+#undef DES_BUS
+#undef DES_BUS_NODE
 #undef DES_NODE
 #undef DES_LINK_NODE
 #undef DES_LINK_PATH

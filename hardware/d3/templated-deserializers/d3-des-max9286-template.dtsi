@@ -11,15 +11,12 @@
  * more details.
  */
 
+
 #include "d3-reset-des.dtsi"
-#include "d3-check-des.dtsi"
-
 #define DES_NAME max9286
-#define DES_PATH CONCAT_3(\
-I2C_BASE_PATH,/,\
-CONCAT_3(DES_NAME,@,DES_ADDR))
-
-#define DES_NODE CONCAT_3(DES_NAME,_,DES_ADDR)
+#define GMSL_LINK
+#include "d3-des-common.dtsi"
+#include "d3-check-des.dtsi"
 
 / {
 	CONCAT_2(i2c@,I2C_ADDR) {

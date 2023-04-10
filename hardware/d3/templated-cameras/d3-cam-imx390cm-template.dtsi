@@ -1,0 +1,46 @@
+/*
+ * Copyright (c) 2023, Define Design Deploy Corp. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+
+#include "d3-reset-cam.dtsi"
+#define CAM_MODEL imx390cm
+#define DRIVER_NAME imx390
+#define IMG_ADDR_PHYSICAL 21
+#include "d3-cam-common.dtsi"
+#include "d3-check-cam.dtsi"
+
+#define SER_NODE_OVERLAY	\
+gpio-rmten = <0x0>; \
+gpio-out-src = <0x1>; \
+gpio-out-en = <0xF>; \
+gpio-in-en = <0x0>; \
+hs-clk-div = <0x1>; \
+div-m-val = <0x1>; \
+div-n-val = <0x28>;
+
+&SER_LINK_NODE {
+	CAM_NODE: CAM_NODE_NAME {
+		compatible = "d3,imx390";
+
+		mclk = "extperiph1";
+		physical_w = "5.37";
+		physical_h = "4.04";
+		sensor_model = "imx390";
+		use_decibel_gain = "true";
+		use_sensor_mode_id = "true";
+		vflip;
+
+#		include "d3-cam-imx390-modes.dtsi"
+	};
+};
+
+#include "d3-overlays-cam.dtsi"

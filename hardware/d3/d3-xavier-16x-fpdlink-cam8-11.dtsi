@@ -30,9 +30,10 @@
 #define I2C_BASE_PATH CONCAT_2(/proc/device-tree/i2c@,I2C_ADDR)
 
 #define EEPROM_ADDR 54
-#define IMG_BUS 2
 
 /* UB960 */
+#define DES_BUS_NODE cam_i2c
+#define DES_BUS 2
 #define DES_ADDR 34
 #include "templated-deserializers/d3-des-ub960-template.dtsi"
 
@@ -45,8 +46,9 @@
 #define POSITION PORT_IDX
 #define ENDPOINT_A 16
 #define ENDPOINT_B 17
-#define SER_ADDR 48
-#define IMG_ADDR 68
+#define SER_BUS 48
+#define ATR_SER_ADDR 48
+#define ATR_IMG_ADDR 68
 
 #include "d3-xavier-16x-fpdlink-cameras.dtsi"
 
@@ -59,8 +61,9 @@
 #define POSITION PORT_IDX
 #define ENDPOINT_A 18
 #define ENDPOINT_B 19
-#define SER_ADDR 49
-#define IMG_ADDR 69
+#define SER_BUS 49
+#define ATR_SER_ADDR 49
+#define ATR_IMG_ADDR 69
 
 #include "d3-xavier-16x-fpdlink-cameras.dtsi"
 
@@ -73,8 +76,9 @@
 #define POSITION A
 #define ENDPOINT_A 20
 #define ENDPOINT_B 21
-#define SER_ADDR 4a
-#define IMG_ADDR 6a
+#define SER_BUS 50
+#define ATR_SER_ADDR 4a
+#define ATR_IMG_ADDR 6a
 
 #include "d3-xavier-16x-fpdlink-cameras.dtsi"
 
@@ -87,7 +91,8 @@
 #define POSITION B
 #define ENDPOINT_A 22
 #define ENDPOINT_B 23
-#define SER_ADDR 4b
-#define IMG_ADDR 6b
+#define SER_BUS 51
+#define ATR_SER_ADDR 4b
+#define ATR_IMG_ADDR 6b
 
 #include "d3-xavier-16x-fpdlink-cameras.dtsi"

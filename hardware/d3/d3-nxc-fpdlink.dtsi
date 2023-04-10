@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, D3 Engineering.	All rights reserved.
+ * Copyright (c) 2023, D3 Engineering.	All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,20 +17,20 @@
 	num_csi_lanes = <12>;
 };
 
-&vi_base {
+&capture_vi_base {
 	num-channels = <12>;
 };
 
 &csi_base {
 	num-channels = <12>;
 };
+
 /{
 	gpio@c2f0000
 	{
 		/delete-node/ w-disable1;
 	};
-};
-/{
+
 	fixed-regulators {
 		p3509_vdd_usb2_5v: regulator@114 {
 			compatible = "regulator-fixed";
@@ -92,16 +92,6 @@
 			compatible = "regulator-fixed";
 			regulator-always-on;
 			gpio = <&tegra_main_gpio TEGRA194_MAIN_GPIO(R,0) GPIO_ACTIVE_LOW>;
-			enable-active-high;
-		};
-		/* This GPIO is passed though to USB VDD on rev 3+ boards*/
-		usb_hub_vdd_rev3: regulator@406 {
-			status = "okay";
-			reg = <0x196>;
-			regulator-name = "usb_hub_vdd_rev3";
-			compatible = "regulator-fixed";
-			regulator-always-on;
-			gpio = <&tegra_main_gpio TEGRA194_MAIN_GPIO(C,2) GPIO_ACTIVE_LOW>;
 			enable-active-high;
 		};
 		usb_rst: regulator@500 {
@@ -222,8 +212,7 @@
 			enable-active-high;
 		};
 	};
-};
-/{
+
 	xusb_padctl@3520000 {
 		ports {
 			usb2-2 {
@@ -234,3 +223,4 @@
 		};
 	};
 };
+

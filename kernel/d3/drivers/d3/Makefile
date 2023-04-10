@@ -24,6 +24,7 @@ obj-$(CONFIG_D3_UB953) += ub953/
 # obj-y += max9296/
 obj-$(CONFIG_D3_IMX390) += imx390/
 obj-$(CONFIG_D3_IMX490) += imx490/
+obj-$(CONFIG_D3_AR0234) += ar0234/
 obj-$(CONFIG_D3_AR0820) += ar0820/
 obj-$(CONFIG_D3_OV10640) += ov10640/
 

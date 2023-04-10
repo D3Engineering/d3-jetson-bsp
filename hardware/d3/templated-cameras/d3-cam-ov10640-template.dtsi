@@ -11,17 +11,12 @@
  * more details.
  */
 
-#include "d3-reset-cam.dtsi"
-#include "d3-check-cam.dtsi"
+ #include "d3-reset-cam.dtsi"
+ #define CAM_MODEL ov10640
+ #define IMG_ADDR_PHYSICAL 32
+ #include "d3-cam-common.dtsi"
+ #include "d3-check-cam.dtsi"
 
-
-#define CAM_MODEL ov10640
-
-#define CAM_NODE CONCAT_3(CAM_MODEL,_,PORT_IDX)
-#define CAM_NODE_NAME CONCAT_3(CAM_MODEL,@,IMG_ADDR)
-#define SEN_OUT_NODE CONCAT_2(sen_out_, CAM_NODE)
-
-#define SEN_PATH CONCAT_3(SER_PATH,/,CAM_NODE_NAME)
 #define SER_NODE_OVERLAY			\
 	gpio-rmten = <0x0>;			\
 	gpio-out-src = <0x6>;			\
@@ -91,18 +86,13 @@
 	embedded_metadata_height = "0";			\
 	min_gain_val = "1.5";				\
 	max_gain_val = "8.0";				\
-	vc_id = STR(PORT_VCID)
+	vc_id = STR(PORT_VCID);
 
 
-&SER_NODE {
+&SER_LINK_NODE {
 	CAM_NODE: CAM_NODE_NAME {
-		status = STR(STATUS);
 		compatible = "d3,ov10640";
-		#address-cells = <1>;
-		#size-cells = <0>;
-		reg = <HEX_PREFIX(IMG_ADDR)>;
-		physical-addr = <0x32>;
-		devnode = STR(CONCAT_2(video,PORT_IDX));
+
 		mclk = "extperiph1";
 		physical_w = "5.41";
 		physical_h = "4.57";
@@ -110,8 +100,6 @@
 
 		use_decibel_gain = "false";
 		use_sensor_mode_id = "true";
-
-		deserializer = <&DES_NODE>;
 
 		// These two properties make GPIO reset logic work
 		// These help control the OV10640 reset process more carefully,
@@ -124,7 +112,7 @@
 
 		/* Long exposure mode (linear) */
 		mode0 {
-			OV10640_MODE_COMMON;
+			OV10640_MODE_COMMON
 			mode_type = "bayer";
 			min_hdr_ratio = "1";
 			max_hdr_ratio = "1";
@@ -135,7 +123,7 @@
 		/* 3 exposure HDR mode  */
 #if D3_OV10640_HDR_ENABLE
 		mode1 {
-			OV10640_MODE_COMMON;
+			OV10640_MODE_COMMON
 			/* HDR mode specific */
 			mode_type = "bayer_wdr_pwl";
 			min_hdr_ratio = "256.0";
@@ -157,24 +145,6 @@
 			control_point_y_4 = "4096";
 		};
 #endif /* D3_OV10640_HDR_ENABLE */
-
-		ports {
-			#address-cells = <1>;
-			#size-cells = <0>;
-
-			status = STR(STATUS);
-			port@0 {
-				reg = <0>;
-				SEN_OUT_NODE: endpoint {
-					vc-id = <PORT_VCID>;
-					status = STR(STATUS);
-					port-index = <CSI_PORT>;
-					bus-width = <CSI_LANES>;
-					remote-endpoint = <&CSI_IN_NODE>;
-				};
-			};
-		};
-
 	};
 };
 

@@ -11,13 +11,12 @@
  * more details.
  */
 
-#include "../templated-cameras/d3-reset-cam.dtsi"
-// resets everything creates by a serializer or sensor
-
 #undef SER_MODEL
 #undef SER_NODE
 #undef SER_NODE_NAME
+#undef DES_LINK_PATH
 #undef SER_PATH
 #undef DES_LINK_NODE
-
+#undef SER_LINK_NODE
 #undef SER_GPIO_NODE
+#undef SER_ADDR_PHYSICAL

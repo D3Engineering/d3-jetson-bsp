@@ -11,3 +11,7 @@
  * more details.
  */
 
+#undef DES_PATH
+#undef DES_NODE
+#undef FPDLINK
+#undef GMSL_LINK

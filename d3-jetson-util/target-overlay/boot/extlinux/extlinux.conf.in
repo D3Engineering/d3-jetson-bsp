@@ -1,7 +1,7 @@
 TIMEOUT 30
 DEFAULT d3
 
-MENU TITLE D3 boot options
+MENU TITLE D3 Boot Options
 
 LABEL d3
     MENU LABEL D3
@@ -13,7 +13,7 @@ LABEL d3
     APPEND ${cbootargs} root=/dev/mmcblk0p1 rw rootwait rootfstype=ext4 @D3_EXTLINUX_APPEND@ active_overlays=
 
 LABEL nvidia
-    MENU LABEL Nvidia Original
+    MENU LABEL NVIDIA Original
     LINUX /boot/Image
     INITRD /boot/initrd
     APPEND ${cbootargs} root=/dev/mmcblk0p1 rw rootwait rootfstype=ext4 @D3_EXTLINUX_APPEND@

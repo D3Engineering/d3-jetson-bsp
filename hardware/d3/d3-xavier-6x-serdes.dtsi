@@ -13,7 +13,6 @@
 #include "d3-xavier.dtsi"
 #define D3_BOARD_XAVIER_CIC
 / {
-
 	/* I2C_CAM, DT alias: i2c2 (clock: C6, data: D6) */
 	i2c@3180000 {
 
@@ -42,60 +41,6 @@
 				#address-cells = <1>;
 				#size-cells = <0>;
 				i2c-mux,deselect-on-exit;
-
-				/*  DS90UB960 Deserializer (U1) */
-				ds90ub960: ub960@32 {
-					status = "okay";
-					compatible = "d3,ub960";
-					reg = <0x32>;
-					#address-cells = <1>;
-					#size-cells = <0>;
-
-					iovdd-supply = <&p2822_vdd_1v8_cvb>;
-					avdd-supply = <&fpd_vdd>;
-					pdb-gpios = <&tegra_main_gpio TEGRA_MAIN_GPIO(T, 6) GPIO_ACTIVE_LOW>;
-					/* Valid values are: 1600, 1200, 800, 400 NOTE
-					 * that 1600 is dependent upon REFCLK. For a 25Mhz
-					 * REFCLK the speed is 1600, for 23 Mhz is it
-					 * 1472, for for 26Mhz it is 1664
-					 *
-					 * If this is not present 1600* is used
-					 */
-					csi-tx-speed-mbps = <1600>;
-					/* 1,2,3, or 4 */
-					csi-lane-count = <4>;
-
-					/* 0, or 1 */
-					csi-continuous-clock = <1>;
-
-					ds90ub960_link0: link@0 {
-						status = "okay";
-                                                reg = <0>;
-						#address-cells = <1>;
-						#size-cells = <0>;
-					};
-
-					ds90ub960_link1: link@1 {
-						status = "okay";
-						reg = <1>;
-						#address-cells = <1>;
-						#size-cells = <0>;
-					};
-
-					ds90ub960_link2: link@2 {
-						status = "okay";
-						reg = <2>;
-						#address-cells = <1>;
-						#size-cells = <0>;
-					};
-
-					ds90ub960_link3: link@3 {
-						status = "okay";
-						reg = <3>;
-						#address-cells = <1>;
-						#size-cells = <0>;
-					};
-				};
 			};
 
 			i2c_gmsl: i2c@1 {

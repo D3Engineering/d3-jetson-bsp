@@ -1,0 +1,47 @@
+/*
+ * Copyright (c) 2023, Define Design Deploy Corp. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+
+#include "d3-reset-cam.dtsi"
+// Model name used to refer to this sensor (see d3-cam-common for various uses)
+#define CAM_MODEL sen1234
+// Physical address of sensor
+#define IMG_ADDR_PHYSICAL 10
+#include "d3-cam-common.dtsi"
+// If absolutely necessary, override common params here (this will affect portability!)
+#include "d3-check-cam.dtsi"
+
+#if defined(GMSL)
+// Overlays and/or params specific to GMSL ser/des
+#elif defined(FPDLINK)
+// Overlays and/or params specific to FPDLINK ser/des
+#endif
+
+&SER_LINK_NODE {
+	CAM_NODE: CAM_NODE_NAME {
+		compatible = "d3,sen1234";
+
+		reset-gpios = <&SER_GPIO_NODE 0 GPIO_ACTIVE_HIGH>;
+
+		// NV specific settings
+		mclk = "extperiph1";
+		physical_w = "8.28";
+		physical_h = "5.18";
+		sensor_model = "sen1234";
+		use_decibel_gain = "false";
+		use_sensor_mode_id = "true";
+
+#		include "d3-cam-EXAMPLE-modes.dtsi"
+	};
+};
+
+#include "d3-overlays-cam.dtsi"

@@ -18,6 +18,6 @@
 
 #include <linux/i2c.h>
 
-int ub953_set_frame_sync_enable(struct device *dev, bool enabled);
+int ub953_set_frame_sync_enable(struct i2c_client *dev, bool enabled);
 
 #endif

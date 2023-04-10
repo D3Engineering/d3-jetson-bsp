@@ -10,22 +10,34 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  */
-
 #include "d3-reset-full.dtsi"
 
-#define DES_NODE ds90ub960
-#define DES_PATH /proc/device-tree/i2c@3180000/mux@70/i2c@0/ub960@32
-#define SER_ADDR 3c
-#define IMG_BUS 9
-#define IMG_ADDR 48
+#define STATUS disabled
+#define ORIENTATION 1
+
+#if defined(XAVIER)
+#define IOVDD_SUPPLY <&p2822_vdd_1v8_cvb>
+#define AVDD_SUPPLY <&fpd_vdd>
+#define RESET_PIN <&tegra_main_gpio TEGRA_MAIN_GPIO(T, 6) GPIO_ACTIVE_LOW>
+#elif defined(ORIN)
+#define IOVDD_SUPPLY <&p3737_vdd_1v8_sys>
+#define AVDD_SUPPLY <&fpd_vdd>
+#define RESET_PIN <&tegra_main_gpio TEGRA_MAIN_GPIO(AC, 1) GPIO_ACTIVE_LOW>
+#endif
+
+#define TEGRA_SINTERFACE serial_a
 #define CSI_PORT 0
 #define CSI_LANES 4
-#define IOVDD_SUPPLY <&vdd_1v8_ap>
-#define AVDD_SUPPLY <&vdd_1v8_ap>
-#define STATUS disabled
-#define TEGRA_SINTERFACE serial_a
 #define VI_INPUT_STREAM 0
-#define ORIENTATION 1
+
+#define I2C_BASE_PATH /proc/device-tree/i2c@3180000/mux@70/i2c@0
+#define DES_BUS 20
+#define DES_BUS_NODE i2c_fpdlink
+#define DES_ADDR 32
+#define EEPROM_ADDR 54
+
+#include "templated-deserializers/d3-des-ub960-template.dtsi"
+
 
 /* Port 0 */
 #include "d3-reset-port.dtsi"
@@ -36,10 +48,14 @@
 #define POSITION PORT_IDX
 #define ENDPOINT_A 0
 #define ENDPOINT_B 1
-#define SER_ADDR 40
-#define IMG_ADDR 60
+#define SER_BUS 40
+#define ATR_SER_ADDR 40
+#define ATR_IMG_ADDR 60
+#define ATR_GPIO_EXP_ADDR 64
+#define ATR_EEPROM_ADDR 68
 
 #include "d3-6x-serdes-cameras-fpdlink.dtsi"
+
 
 /* Port 1 */
 #include "d3-reset-port.dtsi"
@@ -50,8 +66,11 @@
 #define POSITION PORT_IDX
 #define ENDPOINT_A 2
 #define ENDPOINT_B 3
-#define SER_ADDR 41
-#define IMG_ADDR 61
+#define SER_BUS 41
+#define ATR_SER_ADDR 41
+#define ATR_IMG_ADDR 61
+#define ATR_GPIO_EXP_ADDR 65
+#define ATR_EEPROM_ADDR 69
 
 #include "d3-6x-serdes-cameras-fpdlink.dtsi"
 
@@ -65,8 +84,11 @@
 #define POSITION PORT_IDX
 #define ENDPOINT_A 4
 #define ENDPOINT_B 5
-#define SER_ADDR 42
-#define IMG_ADDR 62
+#define SER_BUS 42
+#define ATR_SER_ADDR 42
+#define ATR_IMG_ADDR 62
+#define ATR_GPIO_EXP_ADDR 66
+#define ATR_EEPROM_ADDR 6a
 
 #include "d3-6x-serdes-cameras-fpdlink.dtsi"
 
@@ -80,7 +102,10 @@
 #define POSITION PORT_IDX
 #define ENDPOINT_A 6
 #define ENDPOINT_B 7
-#define SER_ADDR 43
-#define IMG_ADDR 63
+#define SER_BUS 43
+#define ATR_SER_ADDR 43
+#define ATR_IMG_ADDR 63
+#define ATR_GPIO_EXP_ADDR 67
+#define ATR_EEPROM_ADDR 6b
 
 #include "d3-6x-serdes-cameras-fpdlink.dtsi"

@@ -12,7 +12,7 @@ config.status
 configure
 install-sh
 missing
-supplemental/install-example
+supplemental/patches/install-example
 bin/kernel-deb
 d3-jetson-util/debian/changelog
 d3-jetson-util/target-overlay/boot/extlinux/extlinux.conf

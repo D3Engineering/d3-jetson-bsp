@@ -8,6 +8,12 @@ if [ -e "$E_CONF" ]; then
     cp "$E_CONF" "${E_CONF}-"
 fi
 
+# Same for nvfancontrol.conf
+FAN_CONF='/etc/nvfancontrol.conf'
+if [ -e "$FAN_CONF" ]; then
+    cp "$FAN_CONF" "${FAN_CONF}-"
+fi
+
 # Check L4T version for compatibility
 # Intended version
 JETPACK_VER="@JP_VERSION@"

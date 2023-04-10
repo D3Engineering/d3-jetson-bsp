@@ -132,11 +132,11 @@ AC_ARG_WITH(
             AM_CONDITIONAL(XAVIER, true)
             AM_CONDITIONAL(TEGRAFLASH, true)
             system_type=xavier
-            l4t_dir=`realpath ~/nvidia/nvidia_sdk/JetPack_${JP_VERSION}_Linux_JETSON_AGX_XAVIER/Linux_for_Tegra`
+            l4t_dir=`realpath ~/nvidia/nvidia_sdk/JetPack_${JP_VERSION}_Linux_JETSON_AGX_XAVIER_TARGETS/Linux_for_Tegra`
           ;;
           nx)
             AM_CONDITIONAL(NX, true)
-            l4t_dir=`realpath ~/nvidia/nvidia_sdk/JetPack_${JP_VERSION}_Linux_JETSON_XAVIER_NX_DEVKIT/Linux_for_Tegra`
+            l4t_dir=`realpath ~/nvidia/nvidia_sdk/JetPack_${JP_VERSION}_Linux_JETSON_XAVIER_NX_TARGETS/Linux_for_Tegra`
             system_type=xavier-nx-devkit-emmc
           ;;
           *)
@@ -236,7 +236,7 @@ AC_CONFIG_FILES([
     d3-jetson-util/Makefile
     doc/D3-Jetson-BSP-Release-Notes.md
     scripts/target/extlinux.conf
-    supplemental/install-example
+    supplemental/patches/install-example
 ])
 AC_CONFIG_FILES(
     [bin/prep-new-system-from-host], [chmod +x bin/prep-new-system-from-host]

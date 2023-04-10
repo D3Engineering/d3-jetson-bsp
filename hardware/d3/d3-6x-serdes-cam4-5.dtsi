@@ -15,9 +15,6 @@
 
 #define DES_NODE max9296
 #define DES_PATH /proc/device-tree/i2c@3180000/mux@70/i2c@1/max9296@48
-#define SER_ADDR 62
-#define IMG_BUS 40
-#define IMG_ADDR 10
 #define CSI_PORT 2
 #define CSI_LANES 4
 //space for IOVDD_SUPPLY if needed
@@ -38,8 +35,8 @@
 #define POSITION PORT_IDX
 #define ENDPOINT_A 8
 #define ENDPOINT_B 9
-#define SER_ADDR 62
-#define IMG_ADDR 10
+#define SER_BUS 62
+#define IMG_BUS 10
 
 #include "d3-6x-serdes-gmsl-cameras.dtsi"
 
@@ -53,8 +50,8 @@
 #define POSITION PORT_IDX
 #define ENDPOINT_A 10
 #define ENDPOINT_B 11
-#define SER_ADDR 60
-#define IMG_ADDR 11
+#define SER_BUS 60
+#define IMG_BUS 11
 
 #include "d3-6x-serdes-gmsl-cameras.dtsi"
 #endif

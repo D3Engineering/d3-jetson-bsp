@@ -12,27 +12,24 @@
  */
 
 #include "d3-reset-ser.dtsi"
-#include "d3-check-ser-fpdlink.dtsi"
-
 #define SER_MODEL ub953
-#define SER_NODE CONCAT_3(SER_MODEL,_,PORT_IDX)
-#define SER_NODE_NAME CONCAT_3(SER_MODEL,@,SER_ADDR)
-#define SER_PATH CONCAT_5(DES_PATH,/link@,DES_LINK,/,SER_NODE_NAME)
-#define DES_LINK_NODE CONCAT_3(DES_NODE,_link, DES_LINK)
-
-#define SER_GPIO_NODE CONCAT_3(SER_MODEL,_gpio_,PORT_IDX)
+#define SER_ADDR_PHYSICAL 18
+#define GPIO_EXP_ADDR_PHYSICAL 70
+#include "d3-ser-common.dtsi"
+#include "d3-check-ser-fpdlink.dtsi"
 
 &DES_LINK_NODE {
 	SER_NODE: SER_NODE_NAME {
 		compatible = "d3,ub953";
 		status = STR(STATUS);
-		physical-addr = <0x18>;
+		physical-addr = <HEX_PREFIX(SER_ADDR_PHYSICAL)>;
 		#address-cells = <1>;
 		#size-cells = <0>;
 		reg = <HEX_PREFIX(SER_ADDR)>;
 		csi-lane-count = <4>;
 		csi-continuous-clock = <1>;
 		i2c-voltage-sel = <0x0>;
+
 
 		SER_GPIO_NODE: SER_GPIO_NODE {
 			compatible = "d3,ub953-gpio";
@@ -42,4 +39,24 @@
 			ngpios = <4>;
 		};
 	};
+
+	SER_GPIO_EXP_NODE: SER_GPIO_EXP_NODE_NAME {
+		reg = <HEX_PREFIX(GPIO_EXP_ADDR)>;
+		compatible = "nxp,pca9538";
+		status = "disabled";
+		physical-addr = <HEX_PREFIX(GPIO_EXP_ADDR_PHYSICAL)>;
+		gpio-controller;
+		#gpio-cells = <2>;
+	};
+
+#ifdef EEPROM_ADDR
+	SER_EEPROM_NODE: eeprom@EEPROM_ADDR {
+		status = STR(STATUS);
+		compatible = "24c64";
+		label = "d3cm_eeprom";
+		reg = <HEX_PREFIX(EEPROM_ADDR)>;
+		physical-addr = <HEX_PREFIX(EEPROM_ADDR)>;
+		pagesize = <32>;
+	};
+#endif
 };

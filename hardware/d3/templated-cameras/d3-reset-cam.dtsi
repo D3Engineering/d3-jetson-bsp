@@ -20,3 +20,4 @@
 #undef SEN_PATH
 #undef SER_NODE_OVERLAY
 #undef DRIVER_NAME
+#undef IMG_ADDR_PHYSICAL

@@ -11,7 +11,7 @@
  * more details.
  */
 
-
+#include "../d3-overlay-utils.dtsi"
 
 #ifndef SEN_PATH
 #	error "Missing definition: SEN_PATH"
@@ -43,9 +43,6 @@
 #ifndef CAM_MODULE_NODE
 #	error "Missing definition: CAM_MODULE_NODE"
 #endif
-#ifndef SER_NODE_OVERLAY
-#	error "Missing definition: SER_NODE_OVERLAY"
-#endif
 #ifndef POSITION
 #	error "Missing definition: POSITION"
 #endif
@@ -68,6 +65,33 @@
 #	define DRIVER_NAME CAM_MODEL
 #endif
 
+&CAM_NODE {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = STR(STATUS);
+	reg = <HEX_PREFIX(IMG_ADDR)>;
+	physical-addr = <HEX_PREFIX(IMG_ADDR_PHYSICAL)>;
+	devnode = STR(CONCAT_2(video,PORT_IDX));
+	serializer = <&SER_NODE>;
+	deserializer = <&DES_NODE>;
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		status = STR(STATUS);
+		port@0 {
+			reg = <0>;
+			SEN_OUT_NODE: endpoint {
+				vc-id = <PORT_VCID>;
+				status = STR(STATUS);
+				port-index = <CSI_PORT>;
+				bus-width = <CSI_LANES>;
+				remote-endpoint = <&CSI_IN_NODE>;
+			};
+		};
+	};
+};
 
 /{
 	overlay-loader {
@@ -126,14 +150,16 @@
 			};
 			override@6 {
 				target = <&SER_NODE>;
-				_overlay_ {
+				_SER_NODE_OVERLAY(CAM_MODEL,PORT_IDX): _overlay_ {
 					status = "okay";
+#ifdef SER_NODE_OVERLAY
 					SER_NODE_OVERLAY
+#endif
 				};
 			};
 			override@7 {
 				target = <&CAM_MODULE_NODE>;
-				_overlay_ {
+				_CAM_NODE_CAM_MODULE_OVERLAY(CAM_MODEL,PORT_IDX): _overlay_ {
 					status = "okay";
 					badge = STR(CONCAT_4(d3_,POSITION,_,CAM_MODEL));
 					drivernode0 {
@@ -155,6 +181,35 @@
 					status = "okay";
 				};
 			};
+			override@10 {
+				target = <&DES_LINK_NODE>;
+				_CAM_NODE_DES_LINK_OVERLAY(CAM_MODEL,PORT_IDX): _overlay_ {
+					status = "okay";
+				};
+			};
+#if defined(SER_LINK_NODE) && (SER_LINK_NODE != DES_LINK_NODE)
+			override@11 {
+				target = <&SER_LINK_NODE>;
+				_CAM_NODE_SER_LINK_OVERLAY(CAM_MODEL,PORT_IDX): _overlay_ {
+					status = "okay";
+				};
+			};
+#endif
+			override@12 {
+				target-path = "/aliases";
+				_overlay_ {
+					CONCAT_2(video,PORT_IDX) = &CAM_NODE;
+				};
+			};
+
+#ifdef SER_EEPROM_NODE
+			override@13 {
+				target = <&SER_EEPROM_NODE>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+#endif
 		};
 	};
 };

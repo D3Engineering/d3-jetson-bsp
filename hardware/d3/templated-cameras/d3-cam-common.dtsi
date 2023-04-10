@@ -1,0 +1,15 @@
+#define CAM_NODE CONCAT_3(CAM_MODEL,_,PORT_IDX)
+#define CAM_NODE_NAME CONCAT_3(CAM_MODEL,@,IMG_ADDR)
+#define SEN_OUT_NODE CONCAT_2(sen_out_, CAM_NODE)
+
+#if SER_BUS != IMG_BUS
+#define SEN_PATH CONCAT_3(SER_PATH,/,CAM_NODE_NAME)
+#else
+#define SEN_PATH CONCAT_3(DES_LINK_PATH,/,CAM_NODE_NAME)
+#endif
+#ifndef IMG_ADDR
+#define IMG_ADDR IMG_ADDR_PHYSICAL
+#endif
+#if !defined(DRIVER_NAME) && defined(CAM_MODEL)
+#define DRIVER_NAME CAM_MODEL
+#endif

@@ -33,3 +33,7 @@
 #ifndef CSI_LANES
 #   error "Missing definition: CSI_LANES"
 #endif
+
+#if !defined(GMSL) && !defined(FPDLINK)
+#   error "Missing definition GMSL or FPDLINK"
+#endif

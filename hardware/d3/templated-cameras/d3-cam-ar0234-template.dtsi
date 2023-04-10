@@ -1,0 +1,49 @@
+/*
+ * Copyright (c) 2023, Define Design Deploy Corp. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+
+#include "d3-reset-cam.dtsi"
+#define CAM_MODEL ar0234
+#define IMG_ADDR_PHYSICAL 10
+#include "d3-cam-common.dtsi"
+#include "d3-check-cam.dtsi"
+
+&SER_LINK_NODE {
+	CAM_NODE: CAM_NODE_NAME {
+		compatible = "d3,ar0234";
+
+		mclk = "extperiph1";
+		physical_w = "8.28";
+		physical_h = "5.18";
+		sensor_model = "ar0234";
+		use_decibel_gain = "false";
+		use_sensor_mode_id = "true";
+
+#ifdef FPDLINK
+		reset-gpios = <&SER_GPIO_EXP_NODE 0 GPIO_ACTIVE_HIGH>;
+#else
+		reset-gpios = <&SER_GPIO_NODE 0 GPIO_ACTIVE_HIGH>;
+#endif
+
+#		include "d3-cam-ar0234-modes.dtsi"
+	};
+};
+
+#include "d3-overlays-cam.dtsi"
+
+#ifdef FPDLINK
+&_CAM_NODE_DES_LINK_OVERLAY(CAM_MODEL,PORT_IDX){
+	SER_GPIO_EXP_NODE_NAME {
+		status = "okay";
+	};
+};
+#endif

@@ -288,21 +288,27 @@ static int imx390_write_reg(struct camera_common_data *s_data, u16 addr, u8 val)
 
 static int imx390_mode_set(struct imx390 *self, enum imx390_mode mode)
 {
-	/* This entire function is a hack and I only allow it because
-	 * it's for debugging purposes. */
 	int err = 0;
 	struct imx390_modes_map *pmode = NULL;
 
 	if ((mode < 0) || (mode >= IMX390_MODE_ENDMARKER)) {
-		dev_err(self->dev, "invalid mode %d (0-4)", mode);
+		dev_err(self->dev, "Invalid mode %d (0-%i)", mode, IMX390_MODE_ENDMARKER-1);
 		return -EINVAL;
 	}
 
+	/* A reset was put in here at one point, and it appears to no longer be
+	 * necessary. Keeping it here incase this helps someone down the road */
+#if 0
 	imx390_reset(self);
+	usleep_range(2000, 4000);
+#endif
 	pmode = &imx390_modes_map[mode];
-	dev_info(self->dev, "setting mode: %s\n", pmode->desc);
-	TRY(err, regmap_multi_reg_write(self->map, pmode->vals, *pmode->n_vals));
-	return 0;
+	dev_info(self->dev, "Setting mode: %s (%i)\n", pmode->desc, mode);
+	err = regmap_multi_reg_write(self->map, pmode->vals, *pmode->n_vals);
+	if (err)
+		dev_info(self->dev, "Failed to set mode: %s (%i)\n", pmode->desc, mode);
+
+	return err;
 }
 
 
@@ -347,10 +353,14 @@ static int imx390_s_stream(struct v4l2_subdev *sd, int enable)
 	}
 
 	if (enable) {
-		if (self->hflip)
+		if (self->hflip) {
+			dev_dbg(self->dev, "Setting horizontal flip");
 			imx390_set_hflip_raw(self, self->hflip);
-		if (self->vflip)
+		}
+		if (self->vflip) {
+			dev_dbg(self->dev, "Setting verital flip");
 			imx390_set_vflip_raw(self, self->vflip);
+		}
 	}
 
 	if ((err = regmap_write(self->map, IMX390_REG_STANDBY, enable ? 0:1))) {
@@ -524,7 +534,13 @@ static int imx390_ctrls_init(struct imx390 *self)
 	v4l2_ctrl_handler_init(&self->ctrl_handler, NUM_CONTROLS);
 
 	ctrl_index = 0;
-	ctrl = v4l2_ctrl_new_std(&self->ctrl_handler, &imx390_ctrl_ops, V4L2_CID_HFLIP, 0, 1, 1, 0);
+	ctrl = v4l2_ctrl_new_std(&self->ctrl_handler,
+			&imx390_ctrl_ops,
+			V4L2_CID_HFLIP,
+			0, /* min */
+			1, /* max */
+			1, /* step */
+			self->hflip);
 	if (ctrl == NULL) {
 		dev_err(self->dev, "Error initializing standard control\n");
 		err = -EINVAL;
@@ -532,7 +548,13 @@ static int imx390_ctrls_init(struct imx390 *self)
 	}
 	self->ctrls[ctrl_index++] = ctrl;
 
-	ctrl = v4l2_ctrl_new_std(&self->ctrl_handler, &imx390_ctrl_ops, V4L2_CID_VFLIP, 0, 1, 1, 0);
+	ctrl = v4l2_ctrl_new_std(&self->ctrl_handler,
+			&imx390_ctrl_ops,
+			V4L2_CID_VFLIP,
+			0, /* min */
+			1, /* max */
+			1, /* step */
+			self->vflip);
 	if (ctrl == NULL) {
 		dev_err(self->dev, "Error initializing standard control\n");
 		err = -EINVAL;
@@ -869,9 +891,7 @@ static int imx390_s_ctrl(struct v4l2_ctrl *ctrl)
 		 * that is the xclr pin. While this isn't impossible
 		 * in a serdes configration it isn't easy right now. */
 		self->s_data->sensor_mode_id = *ctrl->p_new.p_s64;
-		dev_dbg(self->dev, "mode set start");
 		TRY(err, imx390_mode_set(self, *ctrl->p_new.p_s64));
-		dev_dbg(self->dev, "mode set stop");
 		return 0;
 	case V4L2_CID_HFLIP:
 		TRY(err, imx390_set_hflip(self, ctrl->val));
@@ -1053,6 +1073,10 @@ static struct camera_common_pdata *imx390_parse_dt(
 	if (self->deserializer) {
 		dev_dbg(self->dev, "deserializer present");
 	}
+
+	imx390_set_vflip(self, of_property_read_bool(node, "vflip"));
+	imx390_set_hflip(self, of_property_read_bool(node, "hflip"));
+	dev_dbg(self->dev, "%s: VFLIP: %d HFLIP: %d", __func__, self->vflip, self->hflip);
 
 	return board_priv_pdata;
 }

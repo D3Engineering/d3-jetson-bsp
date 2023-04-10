@@ -2,6 +2,17 @@
 
 # Remove symlinks created in postinst
 mode=$1
+cd /var/nvidia/nvcam/settings/
+for p in {0..9} {A..F}; do
+    TARGET_OV10640="d3_${p}_ov10640.isp"
+    TARGET_IMX390RCM="d3_${p}_imx390rcm.isp"
+    TARGET_IMX390CM="d3_${p}_imx390cm.isp"
+
+    rm -f \
+       "$TARGET_OV10640" \
+       "$TARGET_IMX390RCM" \
+       "$TARGET_IMX390CM"
+done
 case $mode in
     upgrade)
     ;;
@@ -11,6 +22,9 @@ case $mode in
         if [ -e /usr/lib/aarch64-linux-gnu/tegra/libnvscf.so.backup ]; then
             mv /usr/lib/aarch64-linux-gnu/tegra/libnvscf.so.backup /usr/lib/aarch64-linux-gnu/tegra/libnvscf.so
         fi
+        if [ -e /etc/nvfancontrol.conf- ]; then
+            mv /etc/nvfancontrol.conf- /etc/nvfancontrol.conf
+        fi
     ;;
     purge)
     ;;
@@ -19,6 +33,9 @@ case $mode in
     abort-install)
         if [ -e /usr/lib/aarch64-linux-gnu/tegra/libnvscf.so.backup ]; then
             mv /usr/lib/aarch64-linux-gnu/tegra/libnvscf.so.backup /usr/lib/aarch64-linux-gnu/tegra/libnvscf.so
+        fi
+        if [ -e /etc/nvfancontrol.conf- ]; then
+            mv /etc/nvfancontrol.conf- /etc/nvfancontrol.conf
         fi
     ;;
     abort-upgrade)

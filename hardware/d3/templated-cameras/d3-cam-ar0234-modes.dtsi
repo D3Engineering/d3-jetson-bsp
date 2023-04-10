@@ -1,0 +1,167 @@
+/*
+ * Copyright (c) 2018-2022, D3 Engineering.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+
+/* The gain factor is set such that the minimum step size 1/(2^7) = 0.0078125 can be represented fully.
+ * The min value is defined as 1.684 per the datasheet, and maximum is 16 per
+ * Nvidia conformance tests (and sanity).
+ */
+#define COMMON_GAIN				\
+	gain_factor =    "10000000";		\
+	step_gain_val =     "78125";		\
+	min_gain_val =   "16842100";		\
+	max_gain_val =   "91428600";			\
+	default_gain =   "16842100";
+
+#if 0 /* Nanoseconds, switch to this when Argus actually supports exposure factor */
+#define COMMON_EXPOSURE							\
+	exposure_factor = "1000000000"; /* 1ns per counts */		\
+	step_exp_time =           "11"; /* fine integration time has 1-clk resolution */ \
+	min_exp_time =         "11800"; /* min coarse integration is 2 counts (~2 lines) */ \
+	max_exp_time =       "6954600";					\
+	default_exp_time =     "11800";
+#else /* Microseconds */
+#define COMMON_EXPOSURE							\
+	exposure_factor = "1000000"; /* 1us per count */		\
+	step_exp_time =         "1"; /* fine integration time has 1-clk resolution */ \
+	min_exp_time =         "11"; /* min coarse integration is 2 counts (~2 lines) */ \
+	default_exp_time =     "11";
+#endif
+
+#define AR0234_COMMON					\
+	mclk_khz = "25000";				\
+	mclk_multiplier = "4";				\
+	num_lanes = STR(CSI_LANES);			\
+	tegra_sinterface = STR(TEGRA_SINTERFACE);	\
+	discontinuous_clk = "no";			\
+	dpcm_enable = "false";				\
+	cil_settletime = "0";				\
+	csi_pixel_bit_depth = "10";			\
+	mode_type = "bayer";				\
+	pixel_phase = "grbg";				\
+	readout_orientation = "0";			\
+	line_length = "1224";				\
+	inherent_gain = "1";				\
+	serdes_pix_clk_hz = "600000000";		\
+	embedded_metadata_height = "0";			\
+	vc_id = STR(PORT_VCID);				\
+	phy_mode = "DPHY";				\
+	COMMON_EXPOSURE					\
+	COMMON_GAIN					\
+	framerate_factor = "1";				\
+	step_framerate = "1";				\
+	min_framerate = "2";				\
+	min_hdr_ratio = "1";				\
+	max_hdr_ratio = "1";				\
+	num_control_points = "0";
+
+/* This value of the pix_clk avoids the need for deskew, which avoids triggering
+ * a known nv bug which prevents streaming
+ * serdes_pix_clk_hz = "500000000";
+ *
+ * This value supports the maximum per-lane rate for the ub960 (1600Mbps) with
+ * 10 bpp. At this value deskew is needed, and the nv bug is triggered. A
+ * work-around is in place, but there are still intermittent failures to start streaming
+ * serdes_pix_clk_hz = "640000000";
+ *
+ * line_length is 2x LINE_LENGTH_PCK (since there are 2 pixels/clock)
+ *
+ * Computation of maximum exposure time: The dataseheet (AND9829-D) states that
+ * the maximum exposure time in lines is equal to the frame rows + blanking. In
+ * practice using that upper limit for exposure time lead to blank and cut-off
+ * frames. To be more conservitive,
+ * max_exp_time = (frame_lines + blanking lines - 100) x row_time
+ * is used, which resolved the visual issues.
+ */
+
+
+mode0 {
+	AR0234_COMMON
+
+	active_w = "1920";
+	active_h = "1080";
+
+	pix_clk_hz = "45000000";
+
+	default_framerate = "30";
+	max_framerate = "30";
+	max_exp_time = "32476";
+};
+
+mode1 {
+	AR0234_COMMON
+
+	active_w = "1920";
+	active_h = "1080";
+
+	pix_clk_hz = "45000000";
+
+	default_framerate = "60";
+	max_framerate = "60";
+	max_exp_time = "16238";
+};
+
+mode2 {
+	AR0234_COMMON
+
+	active_w = "1920";
+	active_h = "1200";
+
+	pix_clk_hz = "45000000";
+
+	default_framerate = "60";
+	max_framerate = "60";
+	max_exp_time = "16238";
+};
+
+mode3 {
+	AR0234_COMMON
+
+	active_w = "1280";
+	active_h = "720";
+
+	pix_clk_hz = "45000000";
+
+	default_framerate = "60";
+	max_framerate = "60";
+	max_exp_time = "16238";
+};
+
+mode4 {
+	AR0234_COMMON
+
+	active_w = "1280";
+	active_h = "720";
+
+	pix_clk_hz = "55200000";
+
+	default_framerate = "120";
+	max_framerate = "120";
+	max_exp_time = "7162";
+};
+
+mode5 {
+	AR0234_COMMON
+
+	active_w = "640";
+	active_h = "480";
+
+	pix_clk_hz = "45000000";
+
+	default_framerate = "120";
+	max_framerate = "120";
+	max_exp_time = "7901";
+};
+
+#undef COMMON_EXPOSURE
+#undef COMMON_GAIN
+#undef AR0234_COMMON

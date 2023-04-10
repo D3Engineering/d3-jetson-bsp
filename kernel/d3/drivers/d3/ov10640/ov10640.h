@@ -93,6 +93,7 @@ struct ov10640 {
 	int frame_sync_mode;
 
 	struct i2c_client *deserializer;
+	struct i2c_client *serializer;
 	bool hflip;
 	bool vflip;
 	bool test_pattern_is_enabled;

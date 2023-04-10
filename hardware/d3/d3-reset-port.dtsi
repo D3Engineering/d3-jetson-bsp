@@ -17,6 +17,12 @@
 #undef POSITION
 #undef ENDPOINT_A
 #undef ENDPOINT_B
-#undef SER_ADDR
+#undef SER_BUS
+#undef IMG_BUS
 #undef IMG_ADDR
+#undef SER_ADDR
 #undef POC_SUPPLY
+#undef ATR_SER_ADDR
+#undef ATR_IMG_ADDR
+#undef ATR_GPIO_EXP_ADDR
+#undef ATR_EEPROM_ADDR

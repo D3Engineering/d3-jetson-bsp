@@ -1,0 +1,6 @@
+config D3_AR0234
+	tristate "Enable OnSemi AR0234 CMOS Image Sensor."
+	depends on LIB_CAMERA_REGISTER_ACCESS
+	help
+	  OnSemi AR0234 CMOS Image Sensor.
+

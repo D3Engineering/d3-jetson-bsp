@@ -1,0 +1,58 @@
+/*
+ * Copyright (c) 2023, Define Design Deploy Corp. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+
+#ifndef D3_OVERLAY_UTILS_H__
+#define D3_OVERLAY_UTILS_H__
+
+#define _SER_NODE(ser_model,port_idx) CONCAT_3(ser_model,_,port_idx)
+#define _CAM_NODE(cam_model,port_idx) CONCAT_3(cam_model,_,port_idx)
+#define _SER_GPIO_EXP_NODE_NAME(addr) CONCAT_3(pcal953,@,addr)
+#define _SER_EEPROM_NODE_OVERLAY(addr) CONCAT_3(eeprom,@,addr)
+#define _SER_NODE_OVERLAY(cam_model,port_idx) CONCAT_2(_CAM_NODE(cam_model,port_idx),_ser_overlay)
+#define _CAM_NODE_DES_LINK_OVERLAY(cam_model,port_idx) CONCAT_2(_CAM_NODE(cam_model,port_idx),_des_link_overlay)
+#define _CAM_NODE_SER_LINK_OVERLAY(cam_model,port_idx) CONCAT_2(_CAM_NODE(cam_model,port_idx),_ser_link_overlay)
+#define _CAM_NODE_CAM_MODULE_OVERLAY(cam_model,port_idx) CONCAT_2(_CAM_NODE(cam_model,port_idx),_cam_module_overlay)
+
+#define FPD_IMG_ADDR_OVERRIDE(cam_model,driver_name,port_idx,cam_addr,ser_addr) \
+	&_CAM_NODE_DES_LINK_OVERLAY(cam_model,port_idx) {		\
+		no-mux;							\
+	};								\
+	&_SER_NODE_OVERLAY(cam_model,port_idx) {			\
+		reg = <HEX_PREFIX(ser_addr)>;				\
+	};								\
+	&_CAM_NODE(cam_model,port_idx) {				\
+		reg = <HEX_PREFIX(cam_addr)>;				\
+	};								\
+	&_CAM_NODE_CAM_MODULE_OVERLAY(driver_name,port_idx) {		\
+		drivernode0 {						\
+			devname = STR(JOIN_2(driver_name,CONCAT_3(DES_BUS,-00,cam_addr))); \
+		};							\
+	};
+
+
+#define FPD_SER_IOEXP_ADDR_OVERRIDE(cam_model,port_idx,ioexp_addr,ioexp_atr_addr) \
+&_CAM_NODE_DES_LINK_OVERLAY(cam_model,port_idx) {			\
+	_SER_GPIO_EXP_NODE_NAME(ioexp_addr) {				\
+		reg = <HEX_PREFIX(ioexp_atr_addr)>;			\
+	};								\
+};
+
+
+#define FPD_EEPROM_ADDR_OVERRIDE(cam_model,port_idx,eeprom_addr,eeprom_atr_addr) \
+&_CAM_NODE_DES_LINK_OVERLAY(cam_model,port_idx) {			\
+	_SER_EEPROM_NODE_OVERLAY(eeprom_addr) {				\
+		reg = <HEX_PREFIX(eeprom_atr_addr)>;			\
+	};								\
+};
+
+#endif

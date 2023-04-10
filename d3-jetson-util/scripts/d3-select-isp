@@ -1,0 +1,276 @@
+#!/usr/bin/python3
+# This utility detects connected cameras, reads their EEPROMs, and enables the
+# proper ISP configuration for that specific camera/lens combination.
+
+import json
+import argparse
+import logging
+from os import listdir
+from os import path
+from os import readlink
+from os import symlink
+from os import remove
+from re import sub
+import glob
+
+
+DEVICE_TREE = "/proc/device-tree"
+AT24_EEPROMS = "/sys/bus/i2c/drivers/at24"
+ISP_LOCATION = "/var/nvidia/nvcam/settings/"
+
+
+"""
+Create a dictionary of camera part numbers to ISP files
+"""
+def init_part_number_isp_lookup() -> dict:
+    imx390w = ISP_LOCATION + "imx390discovery_wide.isp"
+    imx390m = ISP_LOCATION + "imx390discovery_medium.isp"
+    imx390n = ISP_LOCATION + "imx390discovery_narrow.isp"
+    ar0234w = ISP_LOCATION + "ar0234velocity_wide.isp"
+    ar0234m = ISP_LOCATION + "ar0234velocity_medium.isp"
+    ar0234n = ISP_LOCATION + "ar0234velocity_narrow.isp"
+
+    isps = {
+            # Discovery IMX390 =================================================
+            "D3CMC70N-106-085":imx390w,
+            "D3CMC70N-106-085-S":imx390w,
+
+            # Medium FoV
+            "D3CMC68N-106-085":imx390m,
+            "D3CMC52N-106-085-S":imx390m,
+
+            # Narrow FoV
+            "D3CMC69N-106-085":imx390n,
+            "D3CMC67N-106-085-S":imx390n,
+
+            # Velocity AR0234 ==================================================
+            "D3CMC70N-089-085":ar0234w,
+            "D3CMC70N-089-085-S":ar0234w,
+
+            # Medium FoV
+            "D3CMC68N-089-085":ar0234m,
+            "D3CMC68N-089-085-S":ar0234m,
+
+            # Narrow FoV
+            "D3CMC69N-089-085":ar0234n,
+            "D3CMC69N-089-085-S":ar0234n,
+            }
+
+    return isps
+
+
+"""
+1. Read in the entire file at eeprom_path
+2. Parse the JSON
+3. Extract the module part_number field.
+
+Returns part_number as a string if all goes well. None otherwise.
+"""
+def read_part_number_from_eeprom(eeprom_path:str) -> str:
+    eeprom_contents = ""
+    try:
+        logging.info("Reading " + eeprom_path);
+        with open(eeprom_path) as f:
+            # Read line-by-line and ignore null bytes that would choke the json parser
+            for line in f:
+                eeprom_contents += line.strip('\x00')
+
+        # Ask python to do the hard work
+        data = json.loads(eeprom_contents)
+
+        return data['module']['part_number']
+    except PermissionError:
+        logging.error("Insufficient permission to read " + eeprom_path +
+                "! Please try running as root.")
+    except json.decoder.JSONDecodeError as e:
+        logging.error("Problem decoding JSON: " + str(e))
+    except UnicodeDecodeError as e:
+        logging.error(e)
+        logging.warning("EEPROM at " + eeprom_path + " may not be initialized")
+
+
+"""
+Return a list of sysfs paths to D3CM EEPROMs attached to the system.
+"""
+def get_eeproms_list() -> list:
+    eeproms = []
+    # Find all eeproms probed by the at24 driver
+    for ee in glob.glob(AT24_EEPROMS + "/[0-9A-F]*-[0-9A-F]*"):
+        logging.info("AT24 probed EEPROM at " + ee)
+
+        # Ignore other types of eeproms
+        for d3ee in glob.glob(ee + "/d3cm_eeprom*"):
+            logging.info("D3CM EEPROM located at " + d3ee)
+            eeproms.append(d3ee)
+
+    return eeproms
+
+
+"""
+Create a dictionary with string keys and string values to look up a camera's
+badge by its device tree path. Strip off the /proc/device-tree or
+/sys/firmware/devicetree prefixes. For example:
+
+Keys                                         | Values
+---------------------------------------------|----------------
+i2c@3180000/tca9546@77/i2c@1/ub960@34/link@2 | d3_6_imx390rcm
+i2c@3180000/tca9546@77/i2c@1/ub960@34/link@0 | d3_4_imx390rcm
+i2c@3180000/tca9546@77/i2c@1/ub960@34/link@3 | d3_7_imx390rcm
+i2c@3180000/tca9546@77/i2c@1/ub960@34/link@1 | d3_5_imx390rcm
+"""
+def get_badges() -> dict:
+    badges = {}
+    for badgeroot in glob.glob(DEVICE_TREE + "/tegra-camera-platform/modules/module*/badge"):
+        with open (badgeroot) as f:
+            # Read the badge of each module present in the device tree
+            badgename = f.readline().strip('\x00')
+
+            # Ignore other types of sensors
+            if "d3" in badgename:
+                logging.info("Discovered " + badgename + " at " + badgeroot)
+
+                # Look in drivernode0 to get the device tree path for the
+                # sensor that wears this badge
+                with open (path.dirname(badgeroot) + "/drivernode0/proc-device-tree") as g:
+                    # Get rid of the junk
+                    dtpath = g.readline().strip('\x00')
+                    # Make this a relative path for easier string matching
+                    dtpath = sub('\/proc\/device-tree\/', '', dtpath)
+                    dtpath = path.dirname(dtpath)
+                    logging.info("Badge " + badgename + " -> " + dtpath)
+                    badges[dtpath] = badgename
+
+    return badges
+
+
+"""
+Relate the path to a probed AT24 to its device tree parent using the of_node symlink.
+
+Pass in something like /sys/bus/i2c/drivers/at24/44-0054/of_node to get a
+relative device tree path like i2c@3180000/tca9546@77/i2c@1/ub960@34/link@2
+"""
+def get_devicetree_parent(syspath: str) -> str:
+    uglypath = path.dirname(readlink(syspath))
+
+    # Clean up relative path for easier string matching
+    return sub('^[./]*firmware\/devicetree\/base\/', '', uglypath)
+
+
+"""
+Create a symbolic link to target called link_name.
+
+If link_name already exists and force is true, then overwrite the existing
+symlink. If force is false, do not alter existing symlinks.
+
+Returns True if the symlink was created. False otherwise.
+"""
+def create_symlink(target:str, link_name:str, force:bool) -> bool:
+    print(link_name + " -> " + target)
+    try:
+        # See if it already exists
+        if path.islink(link_name):
+            if force:
+                logging.info("Removing existing symbolic link " + link_name)
+                remove(link_name)
+            else:
+                logging.warning("Use --force to overwrite existing links. Skipping " + link_name + " for now.")
+                return False
+
+        logging.info("Creating symbolic link " + link_name)
+        symlink(target, link_name)
+        return True
+    except PermissionError as e:
+        logging.error("Insufficient permission to manupulate symlinks. Please try running as root.")
+        return False
+    except OSError as e:
+        logging.error(e)
+        return False
+
+
+"""
+Ask the user to overwite the symlink or not.
+Return True if yes, False otherwise.
+"""
+def prompt(link_name) -> bool:
+    return input("\nOverwrite " + link_name + "? (y/n) ") == "y"
+
+
+"""
+Parse arguments and create symlinks to the correct lens-specific tuning for any
+and all D3CMs with an EEPROM populated
+"""
+def main() -> None:
+    # Argument setup
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-v", "--verbose", action = "store_true",
+            help = "Increase the output for debugging purposes")
+    parser.add_argument("-f", "--force", action = "store_true",
+            help = "Use it, Luke; overwrite symbolic links if they already exist")
+    parser.add_argument("-a", "--ask", action = "store_true",
+            help = "Interactively decide which ISP symlinks to overwrite")
+    args = parser.parse_args()
+
+    # Logging setup
+    if args.verbose:
+        loglevel = logging.INFO
+    else:
+        loglevel = logging.WARN
+    logging.basicConfig(format="%(levelname)s: %(message)s", level=loglevel)
+    logging.info("Starting ISP selection process")
+
+    # Create the lookup table to determine ISP file from Module Part Number
+    isps = init_part_number_isp_lookup()
+
+    # Detect the camera badges enabled by overlay-loader. These will be used
+    # for generating symlink names later.
+    logging.info("Detecting enabled camera badges")
+    badges = get_badges()
+
+    # Get a list of /sys/bus/i2c/ paths for all D3CM EEPROMs currently probed
+    # on the system.
+    logging.info("Detecting probed D3CM EEPROMs")
+    eeproms = get_eeproms_list()
+
+    print("Reading EEPROMs takes a second or two each. Please be patient...")
+    links_created = 0
+    for eeprom_sys_path in eeproms:
+        # Read each EEPROM and get the module part number
+        module_part_number = read_part_number_from_eeprom(eeprom_sys_path + "/nvmem")
+        isp_file = ""
+
+        if module_part_number is None:
+           continue
+
+        # Determine the ISP file that corresponds with the module part number
+        logging.info("Module Part Number: " + module_part_number)
+        try:
+            isp_file = isps[module_part_number]
+            logging.info("ISP File: " + isp_file)
+        except KeyError:
+            logging.error("Could not match Module Part Number " + module_part_number + " to ISP file.")
+            continue
+
+        # Get the EEPROM's parent node from the device tree
+        ee_device_tree_path = get_devicetree_parent(eeprom_sys_path + "/of_node")
+        logging.info("EEPROM Device Tree parent: " + ee_device_tree_path)
+
+        # Use the EEPROM's parent node from the device tree to get the badge
+        # name, which will be used as the name for the symbolic link
+        link_name = ISP_LOCATION + badges[ee_device_tree_path] + ".isp"
+        logging.info("Symbolic link name: " + link_name)
+
+        # Try creating the symbolic link
+        if args.ask:
+            if not prompt(link_name):
+                logging.info("Interactively decided not to overwrite " + link_name)
+                continue
+
+        if create_symlink(isp_file, link_name, args.force or args.ask):
+            links_created = links_created + 1
+
+    logging.info("Created " + str(links_created) + " link(s)")
+    print("Done.")
+
+
+if __name__ == "__main__":
+    main()

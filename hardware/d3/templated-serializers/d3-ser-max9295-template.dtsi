@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, D3 Engineering. All rights reserved.
+ * Copyright (c) 2019-2022, D3 Engineering. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -9,16 +9,16 @@
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
- */
+*/
+
+/* Temporary fix to avoid compile issue with 6x-serdes dtb. Move this to DES template later */
+#define GMSL_LINK
 
 #include "d3-reset-ser.dtsi"
-#include "d3-check-ser-gmsl.dtsi"
-
 #define SER_MODEL max9295
-#define SER_NODE CONCAT_3(SER_MODEL,_,PORT_IDX)
-#define SER_NODE_NAME CONCAT_3(SER_MODEL,@,SER_ADDR)
-#define SER_PATH CONCAT_3(DES_PATH,/link@0/,SER_NODE_NAME)
-#define DES_LINK_NODE CONCAT_3(DES_NODE,_link, DES_LINK)
+#define SER_ADDR_PHYSICAL 62
+#include "d3-ser-common.dtsi"
+#include "d3-check-ser-gmsl.dtsi"
 
 &DES_LINK_NODE {
 	SER_NODE: SER_NODE_NAME {
@@ -29,11 +29,30 @@
 		#size-cells = <0>;
 		physical-addr = <0x62>;
 		gmsl-reset-bit-rates = GMSL_RESET_BIT_RATES;
-		link@0 {
+
+		SER_LINK_NODE: link@0 {
 			reg = <0>;
 			#address-cells = <1>;
 			#size-cells = <0>;
 			bus-number = <IMG_BUS>;
 		};
+
+		SER_GPIO_NODE: SER_GPIO_NODE {
+			compatible = "d3,max9295-gpio";
+			status = "okay";
+			gpio-controller;
+			#gpio-cells = <2>;
+			ngpios = <4>;
+		};
 	};
+
+#ifdef EEPROM_ADDR
+	SER_EEPROM_NODE: eeprom@EEPROM_ADDR {
+		status = STR(STATUS);
+		compatible = "24c64";
+		label = "d3cm_eeprom";
+		reg = <HEX_PREFIX(EEPROM_ADDR)>;
+		pagesize = <32>;
+	};
+#endif
 };

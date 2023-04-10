@@ -181,10 +181,12 @@ d3-jetson-util: $(UTIL_PACKAGE_FILE)
 $(BIN_RELEASE_FILE): kernel-bindeb-pkg doc d3-jetson-util
 	$(AM_V_GEN)
 	$(vecho) "ID      $(D3_JETSON_BSP_BUILDID)"
-	$(vecho) "HASH      $(D3_JETSON_COMMIT_HASH)"
+	$(vecho) "HASH    $(D3_JETSON_COMMIT_HASH)"
 	$(vecho) "CP      Supplemental"
-	$(v)cp -rp supplemental/ "$(BIN_RELEASE_DIR)"/supplemental
-	$(v)rm -f "$(BIN_RELEASE_DIR)"/supplemental/install-example.in
+	$(v)cp -rp supplemental/ "$(BIN_RELEASE_DIR)/"
+	$(v)mkdir -p "$(BIN_RELEASE_DIR)/supplemental/xavier-nx-flash-config/kernel/dtb"
+	$(v)cp -rp build/deploy/boot/d3-nxc*.dtb "$(BIN_RELEASE_DIR)/supplemental/xavier-nx-flash-config/kernel/dtb"
+	$(v)rm -f "$(BIN_RELEASE_DIR)"/supplemental/patches/install-example.in
 	$(vecho) "CP      PDFs"
 	$(v)cp "$(RELNOTES_PDF_FILE)" "$(BIN_RELEASE_DIR)"/doc/
 	$(v)cp "$(NXCBUP_PDF_FILE)" "$(BIN_RELEASE_DIR)"/doc/
@@ -253,6 +255,11 @@ linux-dtbs:
 
 linux-menuconfig:
 	$(v)+$(KCONFIG_ASSIGNMENT) $(MAKE) @LINUX_ARGS@ menuconfig
+
+
+linux-savedefconfig:
+	$(v)+$(KCONFIG_ASSIGNMENT) $(MAKE) @LINUX_ARGS@ savedefconfig
+	cp build/kernel/defconfig kernel/d3/d3_defconfig
 
 
 linux-clean:
@@ -361,6 +368,10 @@ sync-debug:
 	$(v)rsync scripts/target/ @USERNAME_AT@@TARGET_HOST@:debug/ $(RSYNC_OPTS)
 	$(vecho) "SYNC     d3-jetson-util/scripts/"
 	$(v)rsync d3-jetson-util/scripts/ @USERNAME_AT@@TARGET_HOST@:debug/util/ $(RSYNC_OPTS)
+	$(vecho) "SYNC     d3-jetson-util/target-overlay/var/nvidia/nvcam/settings/"
+	$(v)ssh @USERNAME_SSH@ @TARGET_HOST@ "sudo chown -R \$$(id -un) /var/nvidia/nvcam/settings/"
+	$(v)rsync d3-jetson-util/target-overlay/var/nvidia/nvcam/settings/ @USERNAME_AT@@TARGET_HOST@:/var/nvidia/nvcam/settings/ $(RSYNC_OPTS)
+	$(v)ssh @USERNAME_SSH@ @TARGET_HOST@ sudo chown -R root:root /var/nvidia/nvcam/settings/
 
 
 sync-boot:

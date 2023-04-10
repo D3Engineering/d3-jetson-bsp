@@ -27,11 +27,56 @@
 #include <linux/of_irq.h>
 #include <linux/interrupt.h>
 #include <linux/i2c.h>
+#include <linux/i2c-mux.h>
 
 #include <d3/d3-jetson-bsp.h>
 
 #include <d3/ub960.h>
 #include <d3/common.h>
+
+/*
+
+des -> link@0 -> ser, sensor, eeprom, etc
+       link@n -> ser, sensor, eeprom, etc
+
++-----+
+| des |
++-----+
+   |
+   |  +--------+
+   +--+ link@0 |
+   |  +--------+
+   |         |    +-----+
+   |         +----+ ser |
+   |         |    +-----+
+   |         |
+   |         |    +--------+
+   |         +----+ sensor |
+   |         |    +--------+
+   |         |
+   |         |    +--------+
+   |         +----+ eeprom |
+   |              +--------+
+   |
+   |
+   |
+   |
+   |
+   |  +--------+
+   +--+ link@n |
+      +--------+
+             |    +-----+
+             +----+ ser |
+             |    +-----+
+             |
+             |    +--------+
+             +----+ sensor |
+             |    +--------+
+             |
+             |    +--------+
+             +----+ eeprom |
+                  +--------+
+*/
 
 /*
  * Default frame sync timings used if not specified in device tree
@@ -75,6 +120,8 @@ enum {
 	UB960_REG_SFILTER_CFG   = 0x41,
 	UB960_REG_AEQ_CTL       = 0x42,
 	UB960_REG_FV_MIN_TIME	= 0xbc,
+	UB960_REG_SER_ID        = 0x5b,
+	UB960_REG_SER_ALIAS_ID  = 0x5c,
 	UB960_REG_SLAVE_ID0	= 0x5d,
 	UB960_REG_SLAVE_ALIAS0	= 0x65,
 	UB960_REG_PORT_CONFIG	= 0x6d,
@@ -335,69 +382,27 @@ static const struct reg_sequence UB960_CSI2_RESERVED[] = {
 	{.reg = 0xB2, .def = 0x1f, .delay_us = 16000},
 };
 
-
-/**
- * This structure is used for loading information about the associated
- * serializer and sensor from the device tree. This driver will
- * instantiate a serializer. The serializer will instantiate a sensor
- * driver.
- */
-struct ub960_devinfo {
-	/**
-	 * This is the 'compatible' string and thus defines which driver
-	 * is loaded.
-	 */
-	char type[I2C_NAME_SIZE];
-
-	/**
-	 * Address programmed into the deserializer. The deserializer
-	 * forwards IO to this address.
-	 */
-	u32 addr;
-
-	/**
-	 * This is the physical address of the serializer. In practice
-	 * there willbe 4 serializers all with the same physical address
-	 * on different ports. It's the @p addr above that needs to be
-	 * different.
-	 */
-	u32 physical_addr;
-
-
-	/**
-	 * device tree node
-	 */
-	struct device_node *of_node;
-};
-
-
 struct ub960; /* Forward reference for ub960_port */
+
+#define UB960_NUM_ALIASES 8
 
 /**
  * Class for ports
  */
 struct ub960_port {
 	int index;
+	struct device_node *of_node;
 	bool configured;
 	bool enabled;
+	bool started;
+	bool no_mux;
 	struct delayed_work lock_work;
 	bool locked;
 	struct ub960 *self;
-	struct completion lock_complete;
-
-	/** serializer information from device tree for instantiating driver */
-	struct ub960_devinfo ser_info;
-
-	/**
-	 * sensor information from device tree for programming addresses
-	 * into deserializer
-	 */
-	struct ub960_devinfo sensor_info;
-
-	/**
-	 * Serializer driver instance
-	 */
-	struct i2c_client *ser;
+	unsigned ser_id;
+	struct i2c_client *ser_client;
+	struct i2c_client *alias_clients[UB960_NUM_ALIASES];
+	int num_aliases;
 };
 
 /**
@@ -439,6 +444,7 @@ struct ub960 {
 	struct regmap *map;
 	struct mutex indirect_access_lock;
 	struct delayed_work status_work;
+	struct i2c_mux_core *muxc;
 	unsigned long lock_settle_time;
 	unsigned long lock_timeout;
 	unsigned long status_period;
@@ -461,6 +467,7 @@ struct ub960 {
 
 
 static void ub960_port_check_lock_sts(struct work_struct *work);
+static int ub960_remove(struct i2c_client *client);
 
 
 int ub960_s_stream(struct i2c_client *self_in,
@@ -476,10 +483,18 @@ int ub960_s_stream(struct i2c_client *self_in,
 	if (enable) {
 		mutex_lock(lock);
 		++(self->active_streams);
-		mutex_unlock(lock);
+		if (self->active_streams > 1 && self->csi.speed == UB960_CSI_TX_SPEED_1600) {
+			dev_dbg(self->dev, "%s re-issue deskew", src->dev.driver->name);
+			// Initiate single deskew
+			TRY_MUTEX(lock, err, regmap_update_bits(self->map, UB960_REG_CSI_CTL2, 1u << 1, 1u << 1));
+		} else if (self->active_streams == 1) {
+			TRY_MUTEX(lock, err, regmap_write(self->map, UB960_REG_RESET_CTL, 0x01));
+			usleep_range(3 * 1000, 4 * 1000);
+		}
 		dev_dbg(self->dev, "%s started a new stream; "
 				"%d active streams", src->dev.driver->name,
 				self->active_streams);
+		mutex_unlock(lock);
 		return 0;
 	}
 	/* decrement number of streams on disable */
@@ -493,7 +508,7 @@ int ub960_s_stream(struct i2c_client *self_in,
 		if (self->active_streams == 0) {
 			dev_dbg(self->dev, "%s notified end-of-stream,"
 				" performing digital reset", src->dev.driver->name);
-			TRY(err, regmap_write(self->map, UB960_REG_RESET_CTL, 0x01));
+			TRY_MUTEX(lock, err, regmap_write(self->map, UB960_REG_RESET_CTL, 0x01));
 			usleep_range(3 * 1000, 4 * 1000);
 		}
 		mutex_unlock(lock);
@@ -831,189 +846,6 @@ static int ub960_fdp3_port_select(struct ub960 *self, u8 read_port,
 }
 
 /**
- * Congigures ub960 slave id.
- *
- * @param self driver instance
- * @param id which slave id
- * @param addr address of slave id
- *
- * @return 0 on sucess
- */
-static int ub960_slave_id_set(struct ub960 *self, u8 id, u8 addr)
-{
-	int err = 0;
-	TRY(err, regmap_write(self->map, UB960_REG_SLAVE_ID0 + id, addr << 1));
-	return 0;
-}
-
-
-/**
- * Configures slave alias address
- *
- * @param self driver instance
- * @param id which slave id
- * @param addr address
- *
- * @return 0 on success
- */
-static int ub960_slave_alias_set(struct ub960 *self, u8 id, u8 addr)
-{
-	int err = 0;
-	TRY(err, regmap_write(self->map, UB960_REG_SLAVE_ALIAS0 + id, addr << 1));
-	return 0;
-}
-
-
-/**
- * Returns the 8 bit value for CSI_CTL1 register from settings read
- * from the device tree.
- *
- * @param self driver instance
- *
- * @return see description
- */
-static u8 ub960_csi_info_to_reg(struct ub960 *self)
-{
-	u8 val = 0;
-	enum ub960_csi_lane_count lane_cnt;
-	/* 0 csi enable */
-	/* 1 cont clock  */
-	/* 3:2 CSI_ULP (not in the driver yet) */
-	/* 5:4 lane count */
-	/* 6: cal_en (should be enabled for 1.6 Gbps */
-
-	/* Do not set the enable flag yet... */
-	val |= (self->csi.continuous_clock << 1);
-
-
-	switch (self->csi.n_lanes) {
-		case 1:
-			lane_cnt = UB960_CSI_LANE_COUNT_1;
-			break;
-		case 2:
-			lane_cnt = UB960_CSI_LANE_COUNT_2;
-			break;
-		case 3:
-			lane_cnt = UB960_CSI_LANE_COUNT_3;
-			break;
-		case 4:
-			lane_cnt = UB960_CSI_LANE_COUNT_4;
-			break;
-		default:
-			dev_err(self->dev, "n_lanes invalid value (%u)", self->csi.n_lanes);
-			return -EINVAL;
-	}
-	val |= (lane_cnt << 4);
-	/* Enabled calibration for high speed. */
-	if (self->csi.speed == UB960_CSI_TX_SPEED_1600)
-		val |= (1 << 6);
-	return val;
-}
-
-
-/**
- * Initializes channel/port settings but does not start CSI streaming
- * (the function name is, perhaps, not an ideal choice).
- *
- * @param self driver instance
- * @param chan_id channel id
- * @param slave_id1 slave id of serializer
- * @param slave_alias1 slave alias of serializer
- * @param slave_id2 slave id of sensor
- * @param slave_alias2 slave alias of sensor
- *
- * @return 0 on success
- */
-static int ub960_chan_start(struct ub960 *self, u8 chan_id, u8 slave_id1,
-			    u8 slave_alias1, u8 slave_id2, u8 slave_alias2)
-{
-	u8 val = 0;
-	int err = 0;
-	struct mutex *lock = &self->indirect_access_lock;
-
-	dev_dbg(
-		self->dev,
-		"port: %u: ser addr 0x%x -> 0x%x, sen addr 0x%x -> 0x%x",
-		chan_id,
-		slave_id1, slave_alias1,
-		slave_id2, slave_alias2);
-
-	mutex_lock(lock);
-
-	/* 	{0x4C, 0x01}, /\* 0x01 *\/ */
-	TRY_MUTEX(lock, err, ub960_fdp3_port_select(self, chan_id, (1 << chan_id)));
-	/* {0x32, 0x01}, /\*Enable TX port 0*\/ */
-	TRY_MUTEX(lock, err, regmap_write(self->map, UB960_REG_CSI_PORT_SEL, 0x1));
-
-
-	val = ub960_csi_info_to_reg(self);
-	dev_dbg(self->dev, "csi_ctl1: %#x", val);
-	TRY_MUTEX(lock, err, regmap_write(self->map, UB960_REG_CSI_CTL1, val));
-
-	/* {0xBC, 0x80}, /\* Frame valid minimum time*\/ */
-	TRY_MUTEX(lock, err, regmap_write(self->map, UB960_REG_FV_MIN_TIME, 0x80));
-	/* {0x5D, 0x30}, /\*Serializer I2C Address*\/ */
-	TRY_MUTEX(lock, err, ub960_slave_id_set(self, 0, slave_id1));
-	/* {0x65, (IMX390_UB960_PORT_0_SER_ADDR << 1U)}, */
-	TRY_MUTEX(lock, err, ub960_slave_alias_set(self, 0, slave_alias1));
-	/* {0x5E, 0x42}, /\*Sensor I2C Address*\/ */
-	TRY_MUTEX(lock, err, ub960_slave_id_set(self, 1, slave_id2));
-	/* {0x66, (IMX390_UB960_PORT_0_SENSOR_ADDR << 1U)}, */
-	TRY_MUTEX(lock, err, ub960_slave_alias_set(self, 1, slave_alias2));
-	/* {0x6D, 0x7C}, /\*CSI Mode*\/ */
-	TRY_MUTEX(lock, err, regmap_write(self->map, UB960_REG_PORT_CONFIG, 0x7c));
-	/* {0x72, 0x00}, /\*VC Map - All to 0 *\/ */
-
-	/* 0 - 0
-	 * 1 - 0x55
-	 * 2 - 0xaa
-	 * 3 - 0xff
-	 */
-	val = (chan_id << 6) | (chan_id << 4) | (chan_id << 2) | chan_id;
-	TRY_MUTEX(lock, err, regmap_write(self->map, UB960_REG_CSI_VC_MAP, val));
-	/* /\* GJR: based on the datasheet this should be 0x02 for the */
-	/*  * register to match the comment. *\/ */
-	/* {0x7C, 0x00}, /\*Line Valid active high, Frame Valid active high*\/ */
-	TRY_MUTEX(lock, err, regmap_write(self->map, UB960_REG_PORT_CONFIG2, 0x0));
-	/* {0xD5, 0xF2}, /\*Auto Attenuation*\/ */
-	TRY_MUTEX(lock, err, regmap_write(self->map, UB960_REG_AEQ_MIN_MAX, 0xf2));
-
-
-	TRY_MUTEX(lock, err, regmap_update_bits(self->map, UB960_REG_INTERRUPT_CTL,
-						(1 << chan_id), (1 << chan_id)));
-	TRY_MUTEX(lock, err, regmap_update_bits(self->map, UB960_REG_PORT_ICR_LO,
-						UB960_LOCK_STS_MASK, UB960_LOCK_STS_MASK));
-
-	mutex_unlock(lock);
-	return 0;
-}
-
-
-/**
- * Configures a channel/port
- *
- * @param self driver instance
- * @param id port id
- *
- * @return
- */
-static int ub960_chan_cfg(struct ub960 *self, u8 id)
-{
-	int err = 0;
-	struct reg_sequence seq[] = {
-		{UB960_REG_AEQ_CTL,         0x71},
-		{UB960_REG_SFILTER_CFG,     0xA9},
-		{UB960_REG_LINK_ERROR_CNT,  0x33},
-		// Route FrameSync to BC_GPIO0
-		{UB960_REG_BC_GPIO_CTL0,    0x8a},
-	};
-
-	TRY(err, regmap_multi_reg_write(self->map, seq, ARRAY_SIZE(seq)));
-	return 0;
-}
-
-
-/**
  * Starts the ub960
  *
  * @param self driver instance
@@ -1030,17 +862,21 @@ static int ub960_csi_configure(struct ub960 *self)
 	/* 			       UB960_DEFAULTS, */
 	/* 			       ARRAY_SIZE(UB960_DEFAULTS))); */
 
-	/* lower two bits are csi tx speed */
-	TRY(err, regmap_write(self->map, UB960_REG_CSI_PLL_CTL, (1 << 2) | (self->csi.speed & 0x3)));
-	TRY(err, regmap_multi_reg_write(self->map, UB960_CSI2_RESERVED,
-					ARRAY_SIZE(UB960_CSI2_RESERVED)));
 	if (self->csi.speed == UB960_CSI_TX_SPEED_400) {
+		// REF_CLK_MODE: Must be set to 0=200MHz if CSI_TX_SPEED is 400Mbps
+		TRY(err, regmap_write(self->map, UB960_REG_CSI_PLL_CTL, (0u << 2)|(self->csi.speed & 0x3)));
+
 		dev_warn(self->dev,
 			 "writing 400 mbps timing settings (untested!)");
 		TRY(err, regmap_multi_reg_write(self->map,
 						UB960_400_TIMING,
 						ARRAY_SIZE(UB960_400_TIMING)));
+	} else {
+		TRY(err, regmap_write(self->map, UB960_REG_CSI_PLL_CTL, (1u << 2)|(self->csi.speed & 0x3)));
 	}
+
+	TRY(err, regmap_multi_reg_write(self->map, UB960_CSI2_RESERVED,
+					ARRAY_SIZE(UB960_CSI2_RESERVED)));
 
 	/* @todo move settings to device tree */
 
@@ -1057,8 +893,10 @@ static int ub960_csi_configure(struct ub960 *self)
 	/* {0x32, 0x01}, /\*Enable TX port 0*\/ */
 	TRY(err, regmap_write(self->map, UB960_REG_CSI_PORT_SEL, 0x1));
 
-	/* forwarding enabled */
-	TRY(err, regmap_write(self->map, UB960_REG_FWD_CTL1, 0x0));
+	/* map all rx-ports to tx-port 0 */
+	TRY(err, regmap_update_bits(self->map, UB960_REG_FWD_CTL1,
+		0xF,
+		0x0));
 
 	/* enable interrupt pin */
 	if (self->irq)
@@ -1086,31 +924,8 @@ static int ub960_of_read_u32(struct ub960 *self, struct device_node *node,
 
 	err = of_property_read_u32(node, name, out);
 	if (err)
-		dev_warn(self->dev, "missing property: %s", name);
+		dev_warn(self->dev, "%s: missing property: %s", node->name, name);
 	return err;
-}
-
-
-/**
- * Reads a string property from a device tree node reporting warnings
- *
- * @param self driver instance for reporting warnings
- * @param node device tree node to read from
- * @param name property name
- * @param out where to store result
- *
- * @return 0 on success
- */
-static int ub960_of_read_string(struct ub960 *self, struct device_node *node,
-				const char *name, const char **out)
-{
-	int err = 0;
-
-	err = of_property_read_string(node, name, out);
-	if (err)
-		dev_warn(self->dev, "missing property: %s", name);
-	return err;
-
 }
 
 /**
@@ -1185,75 +1000,45 @@ static int ub960_fsync_configure(struct ub960 *self, struct device_node *node)
 	return 0;
 }
 
-
-/**
- * Loads device information from device tree
- *
- * @param self driver instance
- * @param node device tree node to read from
- * @param out extracted device info
- *
- * @return 0 on success
- */
-static int ub960_devinfo_load(struct ub960 *self,
-			      struct device_node *node,
-			      struct ub960_devinfo *out)
+static int ub960_port_pass_through_all(struct ub960 *self, struct ub960_port *port, bool enable)
 {
 	int err = 0;
-	const char *type = NULL;
+	struct mutex *lock = &self->indirect_access_lock;
 
-	TRY(err, ub960_of_read_u32(self, node, "reg", &out->addr));
-	TRY(err, ub960_of_read_u32(self, node, "physical-addr",
-				   &out->physical_addr));
-	TRY(err, ub960_of_read_string(self, node, "compatible", &type));
-	strncpy(out->type, type, sizeof(out->type));
+	if (unlikely(!port->configured))
+		return -EINVAL;
 
-	out->of_node = node;
-	dev_dbg(self->dev, "reg=%#.2x, physical-addr=%#.2x, type=(%s)",
-		out->addr, out->physical_addr, out->type);
+	mutex_lock(lock);
+	TRY_MUTEX(lock, err, ub960_fdp3_port_select(self, port->index, (1 << port->index)));
+	TRY_MUTEX(lock, err, regmap_update_bits(self->map, UB960_REG_BCC_CONFIG, 1u<<7, (enable ? 1u : 0u)<<7));
+	mutex_unlock(lock);
+
 	return 0;
 }
 
-
-/**
- * Loads serializer info from device tree
- *
- * @param self driver instance
- * @param node device tree node
- * @param port which port/channel to load (values stored here)
- *
- * @return 0 on success
- */
-static int ub960_serializer_load(struct ub960 *self,
-				 struct device_node *node,
-				 struct ub960_port *port)
+static int ub960_select_i2c_chan(struct i2c_mux_core *muxc, u32 chan_id)
 {
-	struct device_node *child = NULL;
-
 	int err = 0;
-	int count = 0;
+	struct ub960 *self = i2c_mux_priv(muxc);
 
-	TRY(err, ub960_devinfo_load(self, node, &port->ser_info));
-
-
-	/* @todo fix the kludgy 'count' nonsense */
-	for_each_available_child_of_node(node, child) {
-		if (count > 1) {
-			dev_warn(self->dev, "%s: expecting 1 node", child->name);
-			return 0;
-		}
-		err = ub960_devinfo_load(self, child, &port->sensor_info);
-		// Required for UB960 to ignore GPIO controller
-		if(err) {
-			continue;
-		}
-		++count;
-	}
-	if (count != 1) {
-		dev_warn(self->dev, "%s: expecting one sensor but saw %d!",
-			 node->name, count);
+	if (unlikely(chan_id > ARRAY_SIZE(self->ports)))
 		return -EINVAL;
-	}
+
+	TRY(err, ub960_port_pass_through_all(self, &self->ports[chan_id], true));
+
+	return 0;
+}
+
+static int ub960_deselect_i2c_chan(struct i2c_mux_core *muxc, u32 chan_id)
+{
+	int err = 0;
+	struct ub960 *self = i2c_mux_priv(muxc);
+
+	if (unlikely(chan_id > ARRAY_SIZE(self->ports)))
+		return -EINVAL;
+
+	TRY(err, ub960_port_pass_through_all(self, &self->ports[chan_id], false));
+
 	return 0;
 }
 
@@ -1282,34 +1067,17 @@ static int ub960_set_port_enabled(struct ub960 *self, struct ub960_port *port,
 static int ub960_port_load(struct ub960 *self, struct device_node *node,
 			   struct ub960_port *port)
 {
-	struct device_node *child = NULL;
-	int err = 0;
-	int count = 0;
-
 	dev_dbg(self->dev, "Configure port %d", port->index);
 
 	port->self = self;
+	port->of_node = node;
 	port->locked = false;
+	port->configured = true;
+
+	if (of_property_read_bool(node, "no-mux"))
+		port->no_mux = true;
+
 	INIT_DELAYED_WORK(&port->lock_work, ub960_port_check_lock_sts);
-	init_completion(&port->lock_complete);
-
-	/* @todo fix the kludgy 'count' nonsense */
-	for_each_available_child_of_node(node, child) {
-		if (count > 1) {
-			dev_warn(self->dev,
-				 "%s: expecting 1 node",
-				 child->name);
-			return 0;
-		}
-
-		TRY(err, ub960_serializer_load(self, child, port));
-		++count;
-	}
-	/* sanity check */
-	if (count == 0)
-		dev_warn(self->dev, "port %d has no serializers\n", port->index);
-
-	port->configured = (count > 0);
 
 	return 0;
 }
@@ -1336,7 +1104,7 @@ static int ub960_ports_load(struct ub960 *self)
 
 		if (reg > ARRAY_SIZE(self->ports) - 1) {
 			dev_warn(self->dev,
-				 "ignoring port reg=%d, ub960 has 4 ports", reg);
+				 "ignoring port reg=%d, ub960 has %lu ports", reg, ARRAY_SIZE(self->ports));
 			continue;
 		}
 		self->ports[reg].index = reg;
@@ -1346,57 +1114,196 @@ static int ub960_ports_load(struct ub960 *self)
 	return 0;
 }
 
-
-/**
- * Instantiates i2c_client instance for serializer.
- *
- * @param self ub960 driver instance
- * @param port which port to instantiate
- *
- * @return 0 on success
- */
-static int ub960_serializer_create(struct ub960 *self, struct ub960_port *port)
+static int ub960_port_configure(struct ub960 *self, struct ub960_port *port)
 {
-	struct i2c_adapter *adap = to_i2c_adapter(self->client->dev.parent);
-	struct i2c_board_info i2c_info = {0};
+	int err = 0;
+	struct mutex *lock = &self->indirect_access_lock;
+	unsigned chan_id = port->index;
+	unsigned val;
 
-	/* there was no entry in the device tree for this
-	 * port
-	 */
-	if (port->ser_info.addr == 0) {
-		dev_warn(self->dev, "No DT entry for serializer on port %d\n", port->index);
-		return 0;
+	mutex_lock(lock);
+
+	TRY_MUTEX(lock, err, ub960_fdp3_port_select(self, chan_id, 1u << chan_id));
+
+	// Enable I2C_PASSTHROUGH
+	TRY_MUTEX(lock, err, regmap_update_bits(self->map, UB960_REG_BCC_CONFIG, 1u << 6, 1u << 6));
+
+	// Route FrameSync to BC_GPIO0
+	TRY_MUTEX(lock, err, regmap_update_bits(self->map, UB960_REG_BC_GPIO_CTL0, 0xF << 0, 0xa << 0));
+
+	// Enable TX port 0
+	TRY_MUTEX(lock, err, regmap_write(self->map, UB960_REG_CSI_PORT_SEL, 0x1));
+
+	//NOTE:Fowarding & CSI are disabled here prior to lock detection.
+	//     See ub960_port_check_lock_sts() for when it will be enabled.
+
+	// FWD_PORTn_DIS=1
+	TRY_MUTEX(lock, err, regmap_update_bits(self->map,
+		UB960_REG_FWD_CTL1,
+		1u << (chan_id+4),
+		1u << (chan_id+4)));
+
+	// CSI_CTL1
+	val = 0;
+	switch (self->csi.n_lanes) {
+		case 1:
+			val |= (UB960_CSI_LANE_COUNT_1 << 4);
+			break;
+		case 2:
+			val |= (UB960_CSI_LANE_COUNT_2 << 4);
+			break;
+		case 3:
+			val |= (UB960_CSI_LANE_COUNT_3 << 4);
+			break;
+		case 4:
+			val |= (UB960_CSI_LANE_COUNT_4 << 4);
+			break;
+		default:
+			dev_err(self->dev, "n_lanes invalid value (%u)", self->csi.n_lanes);
+			return -EINVAL;
 	}
 
-	if (port->ser) {
-		dev_warn(self->dev, "Serializer already created for port %d\n", port->index);
-		return 0;
-	}
+	// Enabled calibration for high speed
+	if (self->csi.speed == UB960_CSI_TX_SPEED_1600)
+		val |= (1u << 6);
 
-	strncpy(i2c_info.type, port->ser_info.type, sizeof(i2c_info.type));
-	i2c_info.addr = port->ser_info.addr;
-	i2c_info.of_node = port->ser_info.of_node;
+	if (self->csi.continuous_clock)
+		val |= (1u << 1);
 
-	dev_dbg(self->dev, "Creating i2c device for node: %s\n", port->ser_info.of_node->full_name);
+	TRY_MUTEX(lock, err, regmap_write(self->map, UB960_REG_CSI_CTL1, val));
 
-	port->ser = i2c_new_client_device(adap, &i2c_info);
-	if (!port->ser) {
-		dev_err(self->dev,
-			"could not create i2c client for serializer"
-			" adapter=%s type=%s addr=%#.2x",
-			adap->name, i2c_info.type, i2c_info.addr);
-		return -ENOMEM;
-	}
+	// Enable periodic deskew (only for 1600Mbps)
+	TRY_MUTEX(lock, err, regmap_update_bits(self->map, UB960_REG_CSI_CTL2,
+		1u << 0,
+		(self->csi.speed == UB960_CSI_TX_SPEED_1600 ? 1u : 0u) << 0));
 
-	dev_dbg(self->dev, "Serializer created for port %d\n", port->index);
+	// VC Map - All to chan_id
+	TRY_MUTEX(lock, err, regmap_update_bits(self->map,
+		UB960_REG_CSI_VC_MAP,
+		3u << 6|3u << 4|3u << 2|3u << 0,
+		(chan_id << 6) | (chan_id << 4) | (chan_id << 2) | (chan_id << 0)));
+
+	// DISCARD_ON_PAR_ERR=0|LV_POLARITY=HIGH|FV_POLARITY=HIGH
+	TRY_MUTEX(lock, err, regmap_update_bits(self->map,
+		UB960_REG_PORT_CONFIG2,
+		1u << 5|1u << 1|1u << 0,
+		0|0|0));
+
+	// IE_RXn=1
+	TRY_MUTEX(lock, err, regmap_update_bits(self->map,
+		UB960_REG_INTERRUPT_CTL,
+		1u << chan_id,
+		1u << chan_id));
+
+	TRY_MUTEX(lock, err, regmap_update_bits(self->map,
+		UB960_REG_PORT_ICR_LO,
+		UB960_LOCK_STS_MASK,
+		UB960_LOCK_STS_MASK));
+
+	mutex_unlock(lock);
 
 	return 0;
 }
 
-static int ub960_serializer_destroy(struct ub960 *self, struct ub960_port *port)
+int ub960_port_create_child(struct ub960 *self, struct ub960_port *port, struct device_node *child, unsigned addr, unsigned physical_addr)
 {
-	dev_warn(self->dev, "TODO: Implement serializer destroy\n");
-	WARN_ON_ONCE(true);
+	int err;
+	struct mutex *lock = &self->indirect_access_lock;
+	struct i2c_adapter *adapter = self->client->adapter;
+	struct i2c_board_info i2c_info = {0};
+	unsigned chan_id = port->index;
+	const char *compatible;
+
+	TRY(err, of_property_read_string(child, "compatible", &compatible));
+	strncpy(i2c_info.type, compatible, sizeof(i2c_info.type));
+	i2c_info.addr = addr;
+	i2c_info.of_node = child;
+
+	mutex_lock(lock);
+
+	TRY_MUTEX(lock, err, ub960_fdp3_port_select(self, chan_id, 1u << chan_id));
+
+	dev_dbg(self->dev, "[%d] Create client for %s", chan_id, of_node_full_name(child));
+
+	if (physical_addr == port->ser_id) {
+		dev_dbg(self->dev, "[%d] Alias serializer from %02x to %02x", chan_id, physical_addr, addr);
+
+		TRY_MUTEX(lock, err, regmap_write(self->map, UB960_REG_SER_ALIAS_ID, addr<<1));
+
+		port->ser_client = i2c_new_client_device(adapter, &i2c_info);
+		if (IS_ERR(port->ser_client)) {
+			err = PTR_ERR(port->ser_client);
+			goto fail;
+		} else if (!port->ser_client) {
+			err = -ENOMEM;
+			goto fail;
+		}
+	} else {
+		unsigned index = port->num_aliases;
+		unsigned slave_id_reg = UB960_REG_SLAVE_ID0 + index;
+		unsigned slave_alias_id_reg = UB960_REG_SLAVE_ALIAS0 + index;
+
+		if (index == ARRAY_SIZE(port->alias_clients)) {
+			dev_err(self->dev, "[%d] Exceeded num_aliases (%d)", chan_id, index);
+			err = -ENOMEM;
+			goto fail;
+		}
+
+		dev_dbg(self->dev, "[%d] Alias #%d from %02x to %02x", chan_id, index, physical_addr, addr);
+
+		TRY_MUTEX(lock, err, regmap_write(self->map, slave_id_reg, physical_addr<<1));
+
+		TRY_MUTEX(lock, err, regmap_write(self->map, slave_alias_id_reg, addr<<1));
+
+		port->alias_clients[index] = i2c_new_client_device(adapter, &i2c_info);
+		if (IS_ERR(port->alias_clients[index])) {
+			err = PTR_ERR(port->alias_clients[index]);
+			goto fail;
+		} else if (!port->alias_clients[index]) {
+			err = -ENOMEM;
+			goto fail;
+		}
+		port->num_aliases++;
+	}
+
+fail:
+	mutex_unlock(lock);
+
+	return err;
+
+}
+
+int ub960_port_scan_children(struct ub960 *self, struct ub960_port *port)
+{
+	int err;
+	unsigned chan_id = port->index;
+	struct device_node *child;
+
+	TRY(err, regmap_read(self->map, UB960_REG_SER_ID, &port->ser_id));
+	port->ser_id >>= 1;
+
+	port->num_aliases = 0;
+
+	for_each_available_child_of_node(port->of_node, child) {
+		u32 reg, physical_addr;
+
+		dev_info(self->dev, "[%d] Found child node: %s", chan_id, of_node_full_name(child));
+
+		err = of_property_read_u32(child, "reg", &reg);
+		if (err)
+			continue;
+
+		err = of_property_read_u32(child, "physical-addr", &physical_addr);
+		if (err)
+			physical_addr = reg;
+
+		err = ub960_port_create_child(self, port, child, reg, physical_addr);
+		if (err) {
+			dev_err(self->dev, "[%d] Failed to create i2c device for %s: %d", chan_id, of_node_full_name(child), err);
+			continue;
+		}
+	}
+
 	return 0;
 }
 
@@ -1411,31 +1318,76 @@ static int ub960_ports_configure(struct ub960 *self)
 {
 	int err = 0;
 	int i = 0;
-	struct mutex *lock = &self->indirect_access_lock;
 
+	self->muxc = i2c_mux_alloc(
+		self->client->adapter,
+		self->dev,
+		ARRAY_SIZE(self->ports),
+		0,
+		I2C_MUX_LOCKED,
+		ub960_select_i2c_chan,
+		ub960_deselect_i2c_chan);
+	if (IS_ERR(self->muxc)) {
+		dev_err(self->dev, "Failed to allocate i2c-mux-core");
+		return PTR_ERR(self->muxc);
+	} else if (!self->muxc) {
+		return -ENOMEM;
+	}
+	self->muxc->priv = self;
 
 	for (i = 0; i < ARRAY_SIZE(self->ports); ++i) {
-		struct ub960_port *p = &self->ports[i];
+		struct ub960_port *port = &self->ports[i];
 
-		if (!p->configured)
+		if (!port->configured)
 			continue;
 
-		mutex_lock(lock);
-		TRY_MUTEX(lock, err, ub960_fdp3_port_select(self, i, 1 << i));
-		TRY_MUTEX(lock, err, regmap_write(self->map, UB960_REG_BCC_CONFIG, 0x5e));
-		mutex_unlock(lock);
+		TRY(err, ub960_port_configure(self, port));
 
-		TRY(err, ub960_chan_cfg(self, i));
-
-		TRY(err, ub960_chan_start(self, i,
-					  p->ser_info.physical_addr,
-					  p->ser_info.addr,
-					  p->sensor_info.physical_addr,
-					  p->sensor_info.addr));
-
-		/* Enable port */
-		TRY(err, ub960_set_port_enabled(self, p, true));
+		TRY(err, ub960_set_port_enabled(self, port, true));
 	}
+
+	return 0;
+}
+
+static int ub960_port_start(struct ub960 *self, struct ub960_port *port)
+{
+	int err;
+	struct mutex *lock = &self->indirect_access_lock;
+	unsigned chan_id = port->index;
+
+	if (port->started)
+		return 0;
+
+	dev_dbg(self->dev, "[%d] start port", chan_id);
+
+	mutex_lock(lock);
+
+	TRY_MUTEX(lock, err, ub960_fdp3_port_select(self, chan_id, 1u << chan_id));
+
+	TRY_MUTEX(lock, err, regmap_update_bits(self->map,
+		UB960_REG_FWD_CTL1,
+		1u << (chan_id+4),
+		0u << (chan_id+4)));
+
+	TRY_MUTEX(lock, err, regmap_write(self->map, UB960_REG_CSI_PORT_SEL, 1u << 0));
+
+	TRY_MUTEX(lock, err, regmap_update_bits(self->map,
+		UB960_REG_CSI_CTL1,
+		1u << 0,
+		1u << 0));
+
+	mutex_unlock(lock);
+
+	if (port->no_mux) {
+		dev_dbg(self->dev, "[%d] scan for child i2c nodes", chan_id);
+		TRY(err, ub960_port_scan_children(self, port));
+	} else {
+		dev_dbg(self->dev, "[%d] start muxed i2c adapter", chan_id);
+		TRY(err, i2c_mux_add_adapter(self->muxc, 0, chan_id, 0));
+	}
+
+	port->started = true;
+
 	return 0;
 }
 
@@ -1548,60 +1500,6 @@ static int ub960_load_csi(struct ub960 *self, struct device_node *node)
 		 ub960_csi_tx_speed_to_string(self->csi.speed),
 		 self->csi.n_lanes,
 		 self->csi.continuous_clock ? "yes" : "no");
-	return 0;
-}
-
-/**
- * Loads test pattern parameters from device tree node
- *
- * @param self driver instance
- * @param node device tree node to read
- *
- * @return 0 on success
- */
-/* static int ub960_test_pattern_load(struct ub960 *self, struct device_node *node) */
-/* { */
-/* 	int err = 0; */
-/* 	const char *str; */
-
-/* 	self->test_pattern.node = node; */
-
-/* 	TRY(err, ub960_of_read_string(self, node, "compatible", &str)); */
-/* 	strncpy(self->test_pattern.compat, str, sizeof(self->test_pattern.compat)); */
-
-/* 	TRY(err, ub960_of_read_u32(self, node, "reg", */
-/* 				   &self->test_pattern.reg)); */
-/* 	TRY(err, ub960_of_read_u32(self, node, "line-period", */
-/* 				   &self->test_pattern.line_period)); */
-/* 	TRY(err, ub960_of_read_u32(self, node, "width-bytes", */
-/* 				   &self->test_pattern.width_bytes)); */
-/* 	TRY(err, ub960_of_read_u32(self, node, "height-lines", */
-/* 				   &self->test_pattern.height_lines)); */
-/* 	TRY(err, ub960_of_read_u32(self, node, "vc-id", */
-/* 				   &self->test_pattern.vc_id)); */
-/* 	TRY(err, ub960_of_read_u32(self, node, "data-type", */
-/* 				   &self->test_pattern.data_type)); */
-/* 	TRY(err, ub960_of_read_u32(self, node, "color0-value", */
-/* 				   &self->test_pattern.color0_value)); */
-
-/* 	return 0; */
-/* } */
-
-/**
- * Sets the enable bit on CSI_CTL register to turn on CSI output
- *
- * @param self driver instance
- *
- * @return 0 on success
- */
-static int ub960_csi_enable(struct ub960 *self)
-{
-	int err = 0;
-	u8 val = 0;
-
-	val = ub960_csi_info_to_reg(self);
-	val |= 1;
-	TRY(err, regmap_write(self->map, UB960_REG_CSI_CTL1, val));
 	return 0;
 }
 
@@ -1907,8 +1805,12 @@ static void ub960_port_check_lock_sts(struct work_struct *work)
 	unsigned int rx_port_sts2;
 	unsigned int csi_rx_sts;
 	bool locked;
+	unsigned chan_id = port->index;
 
-	dev_dbg(self->dev, "%s enter", __func__);
+	dev_dbg(self->dev, "[%d] %s enter", chan_id, __func__);
+
+	if (!port->configured)
+		return;
 
 	err = ub960_get_port_status(port, &rx_port_sts1, &rx_port_sts2, &csi_rx_sts);
 	if (err < 0)
@@ -1916,22 +1818,15 @@ static void ub960_port_check_lock_sts(struct work_struct *work)
 
 	locked = ((rx_port_sts1 >> UB960_LOCK_STS_OFFSET) & UB960_LOCK_STS_MASK) == 1;
 
-	dev_dbg_ratelimited(self->dev, "CHECK LOCK: locked=%d, port->locked=%d\n",
-			    locked, port->locked);
+	dev_dbg_ratelimited(self->dev,
+		"[%d] CHECK LOCK: locked=%d, port->locked=%d, port->enabled=%d, port->configured=%d\n",
+		chan_id, locked, port->locked, port->enabled, port->configured);
 
 	if (locked != port->locked) {
 		port->locked = locked;
-		if (locked) {
-			ub960_serializer_create(self, port);
-			complete(&port->lock_complete);
-		} else
-			ub960_serializer_destroy(self, port);
-	}
-
-	err = ub960_csi_enable(self);
-	if (err < 0) {
-		dev_err(self->dev, "err = %i after ub960_csi_enable", err);
-		return;
+		if (port->configured && port->enabled && locked) {
+			ub960_port_start(self, port);
+		}
 	}
 
 	dev_info(self->dev, "[%d] probe success", port->index);
@@ -2020,16 +1915,13 @@ static irqreturn_t ub960_handle_irq(int irq, void *arg)
 	return IRQ_HANDLED;
 }
 
-static void ub960_remove_port(struct ub960 *self, struct ub960_port *port)
+static void ub960_cancel_port_lock_work(struct ub960 *self, struct ub960_port *port)
 {
 	if (!port->configured)
 		return;
 
 	dev_dbg(self->dev, "port->lock_work canceled");
 	cancel_delayed_work_sync(&port->lock_work);
-
-	if (port->ser)
-		i2c_unregister_device(port->ser);
 }
 
 static unsigned int ub960_ports_detected(struct ub960 *self)
@@ -2079,10 +1971,13 @@ static void ub960_poll_status(struct work_struct *work)
 	}
 
 	for (i = 0; i < ARRAY_SIZE(self->ports); ++i) {
-		ub960_remove_port(self, &self->ports[i]);
+		ub960_cancel_port_lock_work(self, &self->ports[i]);
 	}
 
-	dev_err(self->dev, "probe failure");
+	dev_err(self->dev, "poll_status failed: saw_all_ports=%d, all_ports_detected=%d, num_ports_detected=%d",
+		saw_all_ports,
+		all_ports_detected,
+		ub960_ports_detected(self));
 }
 
 static int ub960_setup_irq(struct ub960 *self)
@@ -2128,7 +2023,6 @@ static int ub960_probe(struct i2c_client *client,
 		return -EINVAL;
 	}
 
-	/* allocate memory for 'self' data */
 	TRY_MEM(self, devm_kzalloc(dev, sizeof(*self), GFP_KERNEL));
 
 	i2c_set_clientdata(client, self);
@@ -2140,63 +2034,66 @@ static int ub960_probe(struct i2c_client *client,
 	self->status_count = 10;
 	self->active_streams = 0;
 
-	/* Load configuration from device tree */
 	TRY(err, ub960_configuration_load(self, node));
-	dev_dbg(dev, "err = %i after ub960_configuration_load", err);
 
-	/* Setup regulators */
-	dev_dbg(self->dev, "get regulators");
 	TRY(err, ub960_regulators_get(self));
-	dev_dbg(dev, "err = %i after ub960_regulators_get", err);
 
-	/* Setup gpio */
-	dev_dbg(self->dev, "gpio");
 	TRY(err, ub960_gpios_get(self));
-	dev_dbg(dev, "err = %i after ub960_gpios_get", err);
 
 	mutex_init(&self->indirect_access_lock);
 
-	dev_dbg(self->dev, "regmap init");
 	TRY_MEM(self->map, devm_regmap_init_i2c(client, &ub960_regmap_cfg));
 
-	dev_dbg(self->dev, "reset");
-	err = ub960_reset(self);
-	dev_dbg(dev, "err = %i after ub960_reset", err);
-	if (err == -EREMOTEIO || err == -ETIMEDOUT)
-		return -EPROBE_DEFER;
+	//NOTE: After this point, failure must invoke ub960_remove() to clean up
 
-	/* Sanity check */
-	err = ub960_is_device_supported(self, &is_supported);
-	dev_dbg(dev, "err = %i after ub960_is_device_supported", err);
-	if (err == -EREMOTEIO || err == -ETIMEDOUT)
-		return -EPROBE_DEFER;
-	if (!is_supported) {
-		dev_err(dev, "probe failed, unsupported device");
-		return -EINVAL;
+	err = ub960_reset(self);
+	if (err == -EREMOTEIO || err == -ETIMEDOUT) {
+		err = -EPROBE_DEFER;
+		goto fail;
 	}
 
-	err |= ub960_csi_configure(self);
-	dev_dbg(dev, "err = %i after ub960_csi_configure", err);
-	err |= ub960_fsync_configure(self, node);
-	dev_dbg(dev, "err = %i after ub960_fsync_configure", err);
+	err = ub960_is_device_supported(self, &is_supported);
+	if (err == -EREMOTEIO || err == -ETIMEDOUT) {
+		err = -EPROBE_DEFER;
+		goto fail;
+	}
+	if (!is_supported) {
+		dev_err(dev, "unsupported device");
+		err = -EINVAL;
+		goto fail;
+	}
 
-	/* configure the ports that have been defined in the device tree */
-	err |= ub960_ports_configure(self);
-	dev_dbg(dev, "err = %i after ub960_ports_configure", err);
+	err = ub960_csi_configure(self);
+	if (err)
+		goto fail;
 
+	err = ub960_fsync_configure(self, node);
+	if (err)
+		goto fail;
 
-	TRY(err, ub960_setup_irq(self));
-	dev_dbg(dev, "err = %i after ub960_setup_irq", err);
-	/* TODO: After this point the polled-irq must be recovered upon failure */
+	err = ub960_ports_configure(self);
+	if (err)
+		goto fail;
+
+	err = ub960_setup_irq(self);
+	if (err)
+		goto fail;
 
 	if (self->test_pattern.enabled) {
-		err |= ub960_test_pattern_enable(self);
-		dev_dbg(dev, "err = %i after ub960_test_pattern_enable",  err);
-		err |= ub960_test_pattern_driver_start(self);
-		dev_dbg(dev, "err = %i after ub960_test_pattern_driver_start",  err);
+		err = ub960_test_pattern_enable(self);
+		if (err)
+			goto fail;
+		err = ub960_test_pattern_driver_start(self);
+		if (err)
+			goto fail;
 	}
 
 	return 0;
+
+fail:
+	dev_err(dev, "Probe failure: %i", err);
+	ub960_remove(client);
+	return err;
 }
 
 /**
@@ -2216,8 +2113,26 @@ static int ub960_remove(struct i2c_client *client)
 
 	cancel_delayed_work_sync(&self->status_work);
 
-	for (i = 0; i < ARRAY_SIZE(self->ports); ++i)
-		ub960_remove_port(self, &self->ports[i]);
+	for (i = 0; i < ARRAY_SIZE(self->ports); ++i) {
+		struct ub960_port *port = &self->ports[i];
+
+		ub960_cancel_port_lock_work(self, port);
+
+		if (!port->configured)
+			continue;
+
+		while (port->num_aliases > 0) {
+			if (!IS_ERR_OR_NULL(port->alias_clients[port->num_aliases]))
+				i2c_unregister_device(port->alias_clients[port->num_aliases]);
+			port->num_aliases--;
+		}
+
+		if (!IS_ERR_OR_NULL(port->ser_client))
+			i2c_unregister_device(port->ser_client);
+	}
+
+	if (self->muxc)
+		i2c_mux_del_adapters(self->muxc);
 
 	if (regulator_is_enabled(self->avdd_reg))
 		regulator_disable(self->avdd_reg);

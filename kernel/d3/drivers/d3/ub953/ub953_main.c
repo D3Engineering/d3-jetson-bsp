@@ -59,33 +59,6 @@ enum ub953_csi_lane_count {
 	CSI_LANE_COUNT_ENDMARKER
 };
 
-/**
- * Device driver information from device tree which is used to
- * instantiate a sensor driver.
- */
-struct ub953_devinfo {
-	/**
-	 * compatible string name
-	 */
-	char type[I2C_NAME_SIZE];
-
-	/**
-	 * alias address
-	 */
-	u32 addr;
-
-	/**
-	 * physical device address
-	 */
-	u32 physical_addr;
-
-	/**
-	 * device tree node
-	 */
-	struct device_node *of_node;
-};
-
-
 struct ub953_cfg {
 	int n_lanes;
 	int continuous_clock;
@@ -130,11 +103,6 @@ struct ub953
 	 * used, this will no longer need to be kept track of.
 	 */
 	struct platform_device *gpio;
-
-	/**
-	 * sensor instance loaded by this driver
-	 */
-	struct i2c_client *sensor;
 
 	struct ub953_cfg cfg;
 };
@@ -183,36 +151,6 @@ static int ub953_regmap_init(struct i2c_client *client,
 }
 
 /**
- * Loads device information from a device tree node
- *
- * @param self driver instance
- * @param node device tree node
- * @param out where to store results
- *
- * @return 0 on success
- */
-static int ub953_devinfo_load(struct ub953 *self,
-			      struct device_node *node,
-			      struct ub953_devinfo *out)
-{
-	int err = 0;
-	const char *type = NULL;
-
-	TRY(err, of_property_read_u32(node, "reg", &out->addr));
-	TRY(err, of_property_read_u32(node, "physical-addr",
-				      &out->physical_addr));
-	TRY(err, of_property_read_string(node, "compatible", &type));
-	/* TRY(err, of_property_read_string(node, "type", &type)); */
-	strncpy(out->type, type, sizeof(out->type));
-
-	out->of_node = node;
-	dev_dbg(self->dev, "reg=%#.2x, physical-addr=%#.2x, type=(%s)",
-		out->addr, out->physical_addr, out->type);
-	return 0;
-}
-
-
-/**
  * Kick off the probe logic of the GPIO controller.
  *
  * @param self Instance of the UB953
@@ -238,80 +176,6 @@ static int ub953_gpio_create(struct ub953 *self)
 		self->gpio = NULL;
 	}
 	return err;
-}
-
-/**
- * Loads sensor settings from device tree
- *
- * @param self driver instance
- * @param out_info where to write values to
- *
- * @return 0 on success
- */
-static int ub953_sensor_load(struct ub953 *self, struct ub953_devinfo *out_info)
-{
-	struct device_node *node = self->dev->of_node;
-	struct device_node *child = NULL;
-	int count = 0;
-	int err = 0;
-
-	for_each_available_child_of_node(node, child) {
-		if(count > 1) {
-			dev_warn(self->dev,
-				 "%s: expecting 1 node",
-				 child->name);
-			return 0;
-		}
-		++count;
-		err = ub953_devinfo_load(self, child, out_info);
-		// Currently required to handle the GPIO controller which is also a
-		// child. This is part of the work around approach of having the
-		// deserializer intitiate the imager.
-		if(err)
-			count--;
-	}
-	if(count != 1) {
-		dev_warn(self->dev, "%s: expecting one sensor but saw %d!",
-			 node->name, count);
-		return -EINVAL;
-	}
-	return 0;
-}
-
-/**
- * Instantiates an i2c_client for the sensor
- *
- * @param self driver instance
- * @param devinfo device driver information (for loading sensor)
- *
- * @return 0 on success
- */
-static int ub953_sensor_create(struct ub953 *self,
-			       const struct ub953_devinfo *devinfo)
-{
-	struct i2c_adapter *adap = to_i2c_adapter(self->client->dev.parent);
-	struct i2c_board_info i2c_info = {0};
-
-	strncpy(i2c_info.type, devinfo->type, sizeof(i2c_info.type));
-	i2c_info.addr = devinfo->addr;
-	i2c_info.of_node = devinfo->of_node;
-
-	self->sensor = i2c_new_client_device(adap, &i2c_info);
-	if(!self->sensor)
-	{
-		dev_err(self->dev,
-			"could not create i2c client for sensor"
-			" adapter=%s type=%s addr=%#.2x",
-			adap->name, i2c_info.type, i2c_info.addr);
-		return -ENOMEM;
-	}
-
-	dev_dbg(self->dev,
-			"created i2c client for sensor"
-			" adapter=%s type=%s addr=%#.2x",
-			adap->name, i2c_info.type, i2c_info.addr);
-
-	return 0;
 }
 
 static void ub953_cfg_dump(struct ub953 *self, const struct ub953_cfg *cfg)
@@ -545,7 +409,6 @@ static int ub953_probe(struct i2c_client *client,
 	struct ub953 *self = NULL;
 	struct device *dev = &client->dev;
 	struct device_node *node = client->dev.of_node;
-	struct ub953_devinfo sensor_info;
 
 	dev_dbg(dev, "probe");
 
@@ -562,9 +425,6 @@ static int ub953_probe(struct i2c_client *client,
 	self->dev->platform_data = self;
 
 	mutex_init(&self->indirect_access_lock);
-
-	memset(&sensor_info, 0, sizeof(sensor_info));
-	TRY(err, ub953_sensor_load(self, &sensor_info));
 
 	TRY(err, ub953_regmap_init(client, &ub953_regmap_cfg, &self->map));
 	memset(&self->cfg, 0, sizeof(self->cfg));
@@ -585,9 +445,7 @@ static int ub953_probe(struct i2c_client *client,
 			!self->cfg.wait_for_self_configure) {
 		TRY(err, ub953_gpio_create(self));
 	}
-	TRY(err, ub953_set_frame_sync_enable(dev, true));
-
-	TRY(err, ub953_sensor_create(self, &sensor_info));
+	TRY(err, ub953_set_frame_sync_enable(client, true));
 
 	dev_info(dev, "probe success");
 	return 0;
@@ -611,9 +469,6 @@ static int ub953_remove(struct i2c_client *client)
 	if(self->gpio) {
 		platform_device_unregister(self->gpio);
 	}
-	if(self->sensor) {
-		i2c_unregister_device(self->sensor);
-	}
 
 	return 0;
 }
@@ -628,12 +483,12 @@ static int ub953_remove(struct i2c_client *client)
  *
  * @return 0 on success
  */
-int ub953_set_frame_sync_enable(struct device *dev, bool enabled)
+int ub953_set_frame_sync_enable(struct i2c_client *client, bool enabled)
 {
 	int err = 0;
 	int val = 0;
 	int mask = 0;
-	struct ub953 *self = (struct ub953*)(dev->platform_data);
+	struct ub953 *self = (struct ub953*)i2c_get_clientdata(client);
 
 	if (self->cfg.fsync_gpio >= 0) {
 		mask = 1 << (self->cfg.fsync_gpio + 4);

@@ -11,17 +11,33 @@
  * more details.
  */
 
+#include "d3-overlay-utils.dtsi"
+
 /* UB953 */
 #include "templated-serializers/d3-ser-ub953-template.dtsi"
 
 /* Possible Cams*/
 #include "d3-tegra-nvcsi.dtsi"
+
 #include "templated-cameras/d3-cam-ov10640-template.dtsi"
-#include "templated-cameras/d3-cam-imx390rcm-template.dtsi"
+// On this board the ov10640's address overlaps with the ub960 it attaches to
+// The following will modify the overlays to use address-translation instead of i2c-mux
+FPD_IMG_ADDR_OVERRIDE(ov10640, ov10640, PORT_IDX, ATR_IMG_ADDR, ATR_SER_ADDR)
+
 #include "templated-cameras/d3-cam-imx390-template.dtsi"
-#include "templated-cameras/d3-cam-imx390cmf-template.dtsi"
-/* #include "templated-cameras/d3-cam-imx490fpd-template.dtsi" */
-//#include "templated-cameras/d3-cam-ar0233-fpdlink-template.dtsi"
-// TODO: This camera works, but adding support for it puts the DTB file over
-// the maximum size of 512 KB.
-//#include "templated-cameras/d3-cam-ar0820-fpdlink-template.dtsi"
+// On this board the 3085 serializer has an i2c expander. The address for that
+// expander (0x70) overlaps with a device on bus 2 for Orin and Xavier.
+// The following will modify the overlays to use address-translation instead of i2c-mux
+FPD_IMG_ADDR_OVERRIDE(imx390, imx390, PORT_IDX, ATR_IMG_ADDR, ATR_SER_ADDR)
+FPD_SER_IOEXP_ADDR_OVERRIDE(imx390, PORT_IDX, GPIO_EXP_ADDR_PHYSICAL, ATR_GPIO_EXP_ADDR)
+
+#include "templated-cameras/d3-cam-imx390rcm-template.dtsi"
+#include "templated-cameras/d3-cam-imx390cm-template.dtsi"
+
+#include "templated-cameras/d3-cam-ar0234-template.dtsi"
+FPD_IMG_ADDR_OVERRIDE(ar0234, ar0234, PORT_IDX, ATR_IMG_ADDR, ATR_SER_ADDR)
+FPD_SER_IOEXP_ADDR_OVERRIDE(ar0234, PORT_IDX, GPIO_EXP_ADDR_PHYSICAL, ATR_GPIO_EXP_ADDR)
+
+// Remap the address of the EEPROMs too so they can coexist with other types of cameras
+FPD_EEPROM_ADDR_OVERRIDE(ar0234, PORT_IDX, EEPROM_ADDR, ATR_EEPROM_ADDR)
+FPD_EEPROM_ADDR_OVERRIDE(imx390, PORT_IDX, EEPROM_ADDR, ATR_EEPROM_ADDR)

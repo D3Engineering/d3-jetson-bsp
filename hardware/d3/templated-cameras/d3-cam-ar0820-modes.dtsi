@@ -1,0 +1,47 @@
+/*
+ * Copyright (c) 2023, Define Design Deploy Corp.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+
+mode0 {
+	mclk_khz = "25000"; /* CSI driving clock */
+	num_lanes = STR(CSI_LANES);
+	tegra_sinterface = STR(TEGRA_SINTERFACE);
+	discontinuous_clk = "yes"; /* should I set this to yes? */
+	dpcm_enable = "false";
+	cil_settletime = "0";
+	csi_pixel_bit_depth = "12";
+	mode_type = "bayer";
+	pixel_phase = "grbg";
+	active_w = "3848";
+	active_h = "2168";
+	readout_orientation = "0";
+	line_length = "3968";
+	inherent_gain = "1";
+	mclk_multiplier = "9";
+	pix_clk_hz = "200000000";
+	vc_id = STR(PORT_VCID);
+
+	/* 1-30 dB in .3 dB steps */
+	min_gain_val = "1.0";
+	max_gain_val = "15.0";
+	min_framerate = "30";
+	max_framerate = "30";
+
+	/* Units are microseconds */
+	min_exp_time = "30";
+	max_exp_time = "33333";
+	embedded_metadata_height = "0";
+
+	min_hdr_ratio = "1";
+	max_hdr_ratio = "1";
+	dynamic_pixel_bit_depth = "12";
+};

@@ -195,7 +195,6 @@ static int ov10640_s_stream(struct v4l2_subdev *sd, int enable)
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct camera_common_data *s_data = to_camera_common_data(&client->dev);
 	struct ov10640 *self = (struct ov10640 *)s_data->priv;
-	struct i2c_client *parent_client;
 #ifdef CONFIG_D3_OV10640_DEBUG
 	int err = 0;
 #endif /* CONFIG_D3_OV10640_DEBUG */
@@ -203,10 +202,9 @@ static int ov10640_s_stream(struct v4l2_subdev *sd, int enable)
 	int mode_ix = self->s_data->sensor_mode_id;
 	int is_hdr = ov10640_formats[mode_ix].hdr_en;
 
-	parent_client = of_find_i2c_device_by_node(client->dev.of_node->parent);
 	/* Check data is valid */
-	if (!parent_client) {
-		dev_err(self->dev, "could not find serializer node");
+	if (self->frame_sync_mode && !self->serializer) {
+		dev_err(self->dev, "could not find serializer node required for frame_sync_mode");
 		return -EINVAL;
 	}
 	if (!client) {
@@ -267,12 +265,12 @@ static int ov10640_s_stream(struct v4l2_subdev *sd, int enable)
 		ov10640_combine_write(self);
 		regmap_multi_reg_write(self->map, mode_stream, mode_stream_len);
 		if (self->frame_sync_mode) {
-			ub953_set_frame_sync_enable(&parent_client->dev, true);
+			ub953_set_frame_sync_enable(self->serializer, true);
 		}
 
 	} else {
 		if (self->frame_sync_mode) {
-			ub953_set_frame_sync_enable(&parent_client->dev, false);
+			ub953_set_frame_sync_enable(self->serializer, false);
 		}
 
 		regmap_write(self->map, OV10640_REG_SOFTWARE_CTRL1,
@@ -405,30 +403,28 @@ static const struct media_entity_operations ov10640_media_ops = {
 	.link_validate = v4l2_subdev_link_validate,
 };
 
-
-static int ov10640_deserializer_parse(struct ov10640 *self,
-				      struct i2c_client **out)
+static int ov10640_parse_client(struct ov10640 *self, const char *name, struct i2c_client **out)
 {
-	struct device_node *node = self->client->dev.of_node;
-	struct device_node *deserializer_node;
-	struct i2c_client *deserializer_client;
+	struct device_node *self_node = self->client->dev.of_node;
+	struct device_node *node;
+	struct i2c_client *client;
 
-	deserializer_node = of_parse_phandle(node, "deserializer", 0);
-	if (!deserializer_node) {
-		dev_dbg(self->dev, "could not find deserializer node");
+	node = of_parse_phandle(self_node, name, 0);
+	if (!node) {
+		dev_dbg(self->dev, "could not find %s node", name);
 		return -ENOENT;
 	}
 
-	deserializer_client = of_find_i2c_device_by_node(deserializer_node);
-	of_node_put(deserializer_node);
-	deserializer_node = NULL;
+	client = of_find_i2c_device_by_node(node);
+	of_node_put(node);
+	node = NULL;
 
-	if (!deserializer_client) {
-		dev_dbg(self->dev, "missing deserializer client");
+	if (!client) {
+		dev_dbg(self->dev, "missing %s client", name);
 		return -ENOENT;
 	}
 
-	*out = deserializer_client;
+	*out = client;
 	return 0;
 }
 
@@ -468,14 +464,18 @@ static struct camera_common_pdata *ov10640_parse_dt(
 				 &self->frame_sync_mode) != 0)
 		self->frame_sync_mode = 0;
 
-	/* Errors warnings are reported in deserializer_parse. It is
-	 * OK for this to return an error as the presence of a
-	 * deserializer is optional. */
-	if (ov10640_deserializer_parse(self, &self->deserializer) == 0) {
+	if (ov10640_parse_client(self, "deserializer", &self->deserializer) == 0) {
 		dev_dbg(self->dev, "deserializer present");
 	}
 	else {
 		self->deserializer = NULL;
+	}
+
+	if (ov10640_parse_client(self, "serializer", &self->serializer) == 0) {
+		dev_dbg(self->dev, "serializer present");
+	}
+	else {
+		self->serializer = NULL;
 	}
 	return board_priv_pdata;
 }

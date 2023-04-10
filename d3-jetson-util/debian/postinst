@@ -1,5 +1,34 @@
 #!/bin/bash
 
+# Create symlinks for ISP configurations of LEGACY SENSORS ONLY.
+# Note: If the sensor has an EEPROM and has multiple lens-specific tunes, be
+# sure to update d3-select-isp accordingly
+isp_symlinks()
+{
+    cd /var/nvidia/nvcam/settings/
+    for p in {0..9} {A..F}; do
+        TARGET_OV10640="d3_${p}_ov10640.isp"
+        TARGET_IMX390RCM="d3_${p}_imx390rcm.isp"
+        TARGET_IMX390CM="d3_${p}_imx390cm.isp"
+
+        if ! [ -e "$TARGET_OV10640" ]; then
+            ln -s ov10640.isp "$TARGET_OV10640"
+        fi
+        if ! [ -e "$TARGET_IMX390RCM" ]; then
+            ln -s imx390.isp "$TARGET_IMX390RCM"
+        fi
+        if ! [ -e "$TARGET_IMX390CM" ]; then
+            ln -s imx390.isp "$TARGET_IMX390CM"
+        fi
+    done
+}
+
+echo 'Updating ISP overrides...'
+isp_symlinks
+
 echo 'Updating libnvscf...'
 cp /usr/lib/aarch64-linux-gnu/tegra/libnvscf.so /usr/lib/aarch64-linux-gnu/tegra/libnvscf.so.backup
 cp /usr/lib/d3-jetson-utils/libnvscf.so /usr/lib/aarch64-linux-gnu/tegra/libnvscf.so
+
+echo 'Updating nvfancontrol...'
+cp /etc/d3-jetson-utils/nvfancontrol.conf /etc/nvfancontrol.conf

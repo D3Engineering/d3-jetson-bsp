@@ -19,6 +19,7 @@
 	num_lanes = STR(CSI_LANES);			\
 	tegra_sinterface = STR(TEGRA_SINTERFACE);	\
 	discontinuous_clk = "no";			\
+	set_mode_delay_ms = "800";			\
 	dpcm_enable = "false";				\
 	cil_settletime = "0";				\
 	csi_pixel_bit_depth = "12";			\

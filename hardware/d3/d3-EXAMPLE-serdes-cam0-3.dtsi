@@ -1,0 +1,101 @@
+/*
+ * Copyright (c) 2023, Define Design Deploy Corp. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+#include "d3-reset-full.dtsi"
+
+#define STATUS disabled
+#define ORIENTATION 1
+
+#if defined(XAVIER)
+#define IOVDD_SUPPLY <&p2822_vdd_1v8_cvb>
+#define AVDD_SUPPLY <&fpd_vdd>
+#define RESET_PIN <&tegra_main_gpio TEGRA_MAIN_GPIO(T, 6) GPIO_ACTIVE_LOW>
+#elif defined(ORIN)
+#define IOVDD_SUPPLY <&p3737_vdd_1v8_sys>
+#define AVDD_SUPPLY <&fpd_vdd>
+#define RESET_PIN <&tegra_main_gpio TEGRA_MAIN_GPIO(AC, 1) GPIO_ACTIVE_LOW>
+#endif
+
+#define TEGRA_SINTERFACE serial_a
+#define CSI_PORT 0
+#define CSI_LANES 4
+#define VI_INPUT_STREAM 0
+
+#define I2C_BASE_PATH /proc/device-tree/i2c@3180000
+#define DES_BUS 2
+#define DES_BUS_NODE cam_i2c
+#define DES_ADDR 32
+#include "templated-deserializers/d3-des-ub960-template.dtsi"
+
+
+/* Port 0 */
+#include "d3-reset-port.dtsi"
+
+#define PORT_VCID 0
+#define DES_LINK 0
+#define PORT_IDX 0
+#define POSITION PORT_IDX
+#define ENDPOINT_A 0
+#define ENDPOINT_B 1
+#define SER_BUS 40
+#define ATR_SER_ADDR 40
+#define ATR_IMG_ADDR 60
+
+#include "d3-EXAMPLE-serdes-cameras-fpdlink.dtsi"
+
+
+/* Port 1 */
+#include "d3-reset-port.dtsi"
+
+#define PORT_VCID 1
+#define DES_LINK 1
+#define PORT_IDX 1
+#define POSITION PORT_IDX
+#define ENDPOINT_A 2
+#define ENDPOINT_B 3
+#define SER_BUS 41
+#define ATR_SER_ADDR 41
+#define ATR_IMG_ADDR 61
+
+#include "d3-EXAMPLE-serdes-cameras-fpdlink.dtsi"
+
+
+/* Port 2 */
+#include "d3-reset-port.dtsi"
+
+#define PORT_VCID 2
+#define DES_LINK 2
+#define PORT_IDX 2
+#define POSITION PORT_IDX
+#define ENDPOINT_A 4
+#define ENDPOINT_B 5
+#define SER_BUS 42
+#define ATR_SER_ADDR 42
+#define ATR_IMG_ADDR 62
+
+#include "d3-EXAMPLE-serdes-cameras-fpdlink.dtsi"
+
+
+/* Port 3 */
+#include "d3-reset-port.dtsi"
+
+#define PORT_VCID 3
+#define DES_LINK 3
+#define PORT_IDX 3
+#define POSITION PORT_IDX
+#define ENDPOINT_A 6
+#define ENDPOINT_B 7
+#define SER_BUS 43
+#define ATR_SER_ADDR 43
+#define ATR_IMG_ADDR 63
+
+#include "d3-EXAMPLE-serdes-cameras-fpdlink.dtsi"
