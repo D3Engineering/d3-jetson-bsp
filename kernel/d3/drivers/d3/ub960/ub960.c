@@ -1120,6 +1120,11 @@ static int ub960_port_configure(struct ub960 *self, struct ub960_port *port)
 	struct mutex *lock = &self->indirect_access_lock;
 	unsigned chan_id = port->index;
 	unsigned val;
+	struct reg_sequence seq[] = {
+		{UB960_REG_AEQ_CTL,         0x71},
+		{UB960_REG_SFILTER_CFG,     0xA9},
+		{UB960_REG_LINK_ERROR_CNT,  0x33},
+	};
 
 	mutex_lock(lock);
 
@@ -1130,6 +1135,8 @@ static int ub960_port_configure(struct ub960 *self, struct ub960_port *port)
 
 	// Route FrameSync to BC_GPIO0
 	TRY_MUTEX(lock, err, regmap_update_bits(self->map, UB960_REG_BC_GPIO_CTL0, 0xF << 0, 0xa << 0));
+
+	TRY(err, regmap_multi_reg_write(self->map, seq, ARRAY_SIZE(seq)));
 
 	// Enable TX port 0
 	TRY_MUTEX(lock, err, regmap_write(self->map, UB960_REG_CSI_PORT_SEL, 0x1));
