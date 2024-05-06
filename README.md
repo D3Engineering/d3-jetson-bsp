@@ -1,3 +1,7 @@
+# NOTICE
+
+The D3 Jetson BSP has been replaced by D3 Jetson Modules, which is a package that contains loadable kernel modules for D3's cameras and device tree overlays for D3's interface and carrier boards.  The supported Jetpack version is 5.1.3 as of 5/1/2024.  Visit D3engineering.com to purchase D3's Jetson supported products and D3 Jetson Modules source code and documentation will be provided as a download with your purchase.  Please contact sales@d3engineering.com with any questions.  Thank you!!
+
 # Overview
 
 This project serves two purposes:
